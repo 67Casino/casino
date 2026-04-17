@@ -8,7 +8,7 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
   import { getFirestore, doc, setDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -21,13 +21,66 @@
     appId: "1:315653962787:web:d2df833858d76ff9638596"
   };
 
-  const app = initializeApp(firebaseConfig);
+  const app  = initializeApp(firebaseConfig);
   const auth = getAuth(app);
-  const db = getFirestore(app);
-  window._firebaseAuth = auth;
-  window._firebaseDB = db;
-  window._firebaseFns = { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, doc, setDoc, collection, getDocs };
-  auth.onAuthStateChanged(user => { if (user) location.href = "game.html"; });
+  const db   = getFirestore(app);
+
+  onAuthStateChanged(auth, user => { if (user) location.href = "game.html"; });
+
+  function fakeEmail(u){ return u.toLowerCase().replace(/[^a-z0-9_]/g,'') + '@67casino.game'; }
+
+  window.doLogin = async function() {
+    const u = document.getElementById('loginUsername').value.trim();
+    const p = document.getElementById('loginPassword').value;
+    if (!u || !p){ showMsg('login','Заполни все поля','error'); return; }
+    setLoad('loginBtn', true, loginIcon, '');
+    try {
+      await signInWithEmailAndPassword(auth, fakeEmail(u), p);
+      showMsg('login','Добро пожаловать!','success');
+      setTimeout(() => location.href = 'game.html', 900);
+    } catch(e){
+      let m = 'Что-то пошло не так';
+      if (['auth/invalid-credential','auth/user-not-found','auth/wrong-password'].includes(e.code)) m = 'Неверный никнейм или пароль';
+      else if (e.code === 'auth/too-many-requests') m = 'Слишком много попыток, подожди';
+      showMsg('login', m, 'error');
+      setLoad('loginBtn', false, loginIcon, 'Войти');
+    }
+  };
+
+  window.doRegister = async function() {
+    const u = document.getElementById('regUsername').value.trim();
+    const p = document.getElementById('regPassword').value;
+    if (!u || !p){ showMsg('reg','Заполни все поля','error'); return; }
+    if (u.length < 3){ showMsg('reg','Никнейм минимум 3 символа','error'); return; }
+    if (p.length < 6){ showMsg('reg','Пароль минимум 6 символов','error'); return; }
+    setLoad('regBtn', true, regIcon, '');
+    try {
+      // Считаем uid
+      let uid = 1;
+      try {
+        const snap = await getDocs(collection(db,'users'));
+        uid = snap.size + 1;
+      } catch(e){ uid = Math.floor(Math.random() * 9000) + 1000; }
+
+      const cred = await createUserWithEmailAndPassword(auth, fakeEmail(u), p);
+      await updateProfile(cred.user, { displayName: u });
+      await setDoc(doc(db, 'users', cred.user.uid), {
+        username: u,
+        uid: uid,
+        balance: 1000,
+        createdAt: new Date().toISOString()
+      });
+      showMsg('reg', `Аккаунт создан! Твой ID: #${uid}`, 'success');
+      setTimeout(() => location.href = 'game.html', 1000);
+    } catch(e){
+      console.error('Reg error:', e.code, e.message);
+      let m = 'Ошибка: ' + (e.code || e.message);
+      if (e.code === 'auth/email-already-in-use') m = 'Такой никнейм уже занят';
+      else if (e.code === 'auth/weak-password') m = 'Пароль слишком слабый';
+      showMsg('reg', m, 'error');
+      setLoad('regBtn', false, regIcon, 'Создать аккаунт');
+    }
+  };
 </script>
 
 <style>
@@ -573,66 +626,8 @@ function setLoad(id, loading, icon, label){
   b.innerHTML = loading ? `<span class="spinner"></span> Загрузка...` : `${icon} ${label}`;
 }
 
-function fakeEmail(u){ return u.toLowerCase().replace(/[^a-z0-9_]/g,'') + '@67casino.game'; }
-
-async function doLogin(){
-  const u = document.getElementById('loginUsername').value.trim();
-  const p = document.getElementById('loginPassword').value;
-  if (!u || !p){ showMsg('login','Заполни все поля','error'); return; }
-  setLoad('loginBtn', true, loginIcon, '');
-  try {
-    await window._firebaseFns.signInWithEmailAndPassword(window._firebaseAuth, fakeEmail(u), p);
-    showMsg('login','Добро пожаловать!','success');
-    setTimeout(() => location.href = 'game.html', 900);
-  } catch(e){
-    let m = 'Что-то пошло не так';
-    if (['auth/invalid-credential','auth/user-not-found','auth/wrong-password'].includes(e.code)) m = 'Неверный никнейм или пароль';
-    else if (e.code === 'auth/too-many-requests') m = 'Слишком много попыток, подожди';
-    showMsg('login', m, 'error');
-    setLoad('loginBtn', false, loginIcon, 'Войти');
-  }
-}
-
-async function doRegister(){
-  const u = document.getElementById('regUsername').value.trim();
-  const p = document.getElementById('regPassword').value;
-  if (!u || !p){ showMsg('reg','Заполни все поля','error'); return; }
-  if (u.length < 3){ showMsg('reg','Никнейм минимум 3 символа','error'); return; }
-  if (p.length < 6){ showMsg('reg','Пароль минимум 6 символов','error'); return; }
-  setLoad('regBtn', true, regIcon, '');
-  try {
-    const { createUserWithEmailAndPassword, updateProfile, doc, setDoc, collection, getDocs } = window._firebaseFns;
-    const db = window._firebaseDB, auth = window._firebaseAuth;
-
-    // Считаем uid — если getDocs упадёт, используем timestamp
-    let uid = Date.now() % 10000;
-    try {
-      const snap = await getDocs(collection(db,'users'));
-      uid = snap.size + 1;
-    } catch(e){ /* используем timestamp uid */ }
-
-    const cred = await createUserWithEmailAndPassword(auth, fakeEmail(u), p);
-    await updateProfile(cred.user, { displayName: u });
-    await setDoc(doc(db,'users',cred.user.uid), {
-      username: u,
-      uid: uid,
-      balance: 1000,
-      createdAt: new Date().toISOString()
-    });
-    showMsg('reg', `Аккаунт создан! Твой ID: #${uid}`, 'success');
-    setTimeout(() => location.href = 'game.html', 1000);
-  } catch(e){
-    console.error('Registration error:', e.code, e.message);
-    let m = 'Ошибка регистрации';
-    if (e.code === 'auth/email-already-in-use') m = 'Такой никнейм уже занят';
-    else if (e.code === 'auth/weak-password') m = 'Пароль слишком слабый';
-    showMsg('reg', m, 'error');
-    setLoad('regBtn', false, regIcon, 'Создать аккаунт');
-  }
-}
-
 document.addEventListener('keydown', e => {
-  if (e.key === 'Enter') currentTab === 'login' ? doLogin() : doRegister();
+  if (e.key === 'Enter') currentTab === 'login' ? window.doLogin() : window.doRegister();
 });
 </script>
 </body>
