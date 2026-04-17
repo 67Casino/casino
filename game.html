@@ -594,22 +594,34 @@ const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db   = getFirestore(app);
 
+function fillUI(name, uid, balance) {
+  const bal = Number(balance || 0).toLocaleString('ru');
+  const letter = (name || '?')[0].toUpperCase();
+
+  document.getElementById('profileName').textContent     = name || 'Игрок';
+  document.getElementById('profileUid').textContent      = uid ? '#' + uid : '';
+  document.getElementById('avatarEl').textContent        = letter;
+  document.getElementById('balanceDisplay').textContent  = bal;
+  document.getElementById('walletAmount').textContent    = bal;
+}
+
 onAuthStateChanged(auth, async user => {
-  if (!user){ location.href = 'index.html'; return; }
+  if (!user) { location.href = 'index.html'; return; }
 
-  // Fill profile
-  const snap = await getDoc(doc(db, 'users', user.uid));
-  if (snap.exists()){
-    const data = snap.data();
-    const name = data.username || user.displayName || 'Игрок';
-    const uid  = data.uid || '—';
-    const bal  = (data.balance || 0).toLocaleString('ru');
+  // Сразу показываем что есть в Auth — имя точно там есть
+  const authName = user.displayName || user.email?.split('@')[0] || 'Игрок';
+  fillUI(authName, null, 1000);
 
-    document.getElementById('profileName').textContent  = name;
-    document.getElementById('profileUid').textContent   = '#' + uid;
-    document.getElementById('avatarEl').textContent     = name[0].toUpperCase();
-    document.getElementById('balanceDisplay').textContent = bal;
-    document.getElementById('walletAmount').textContent   = bal;
+  // Потом пробуем Firestore
+  try {
+    const snap = await getDoc(doc(db, 'users', user.uid));
+    if (snap.exists()) {
+      const d = snap.data();
+      fillUI(d.username || authName, d.uid, d.balance);
+    }
+  } catch(e) {
+    // Firestore недоступен — Auth данные уже показаны, всё ок
+    console.log('Firestore недоступен, показываем данные из Auth');
   }
 });
 
