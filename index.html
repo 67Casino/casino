@@ -65,7 +65,9 @@
           tx.set(counterRef, { count: next });
           return next;
         });
-      } catch(e){ console.log('Counter error:', e.message); }
+      } catch(e){
+        alert('Counter error: ' + e.code + ' — ' + e.message);
+      }
 
       const cred = await createUserWithEmailAndPassword(auth, fakeEmail(u), p);
       await updateProfile(cred.user, { displayName: u });
