@@ -314,10 +314,21 @@ html,body { height:100%; background:var(--bg); font-family:'Nunito',sans-serif; 
 .bonus-amount { font-size:14px; font-weight:900; background:linear-gradient(135deg,#fff,var(--soft)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
 
 /* ═══ WALLET ═══ */
-.cur-toggle-wrap { display:flex; background:rgba(3,9,26,0.58); border:1px solid rgba(45,122,255,0.12); border-radius:999px; padding:5px; margin-bottom:14px; }
-.cur-toggle { flex:1; padding:9px; border:none; background:transparent; font-family:'Nunito',sans-serif; font-size:12.5px; font-weight:800; color:var(--muted); cursor:pointer; border-radius:999px; display:flex; align-items:center; justify-content:center; gap:5px; transition:background .25s,color .25s,box-shadow .25s; outline:none; user-select:none; }
-.cur-toggle.active { background:linear-gradient(135deg,var(--blue2),var(--accent)); color:#fff; box-shadow:0 0 16px rgba(45,122,255,.35); }
+.cur-toggle-wrap { display:flex; position:relative; background:rgba(3,9,26,0.58); border:1px solid rgba(45,122,255,0.12); border-radius:999px; padding:5px; margin-bottom:14px; }
+.cur-toggle-slider { position:absolute; top:5px; bottom:5px; border-radius:999px; background:linear-gradient(135deg,var(--blue2),var(--accent)); box-shadow:0 0 16px rgba(45,122,255,.35); will-change:left,width; pointer-events:none; }
+.cur-toggle-slider.animated { transition:left .38s cubic-bezier(.4,0,.2,1),width .38s cubic-bezier(.4,0,.2,1); }
+.cur-toggle { flex:1; padding:9px; border:none; background:transparent; font-family:'Nunito',sans-serif; font-size:12.5px; font-weight:800; color:var(--muted); cursor:pointer; border-radius:999px; display:flex; align-items:center; justify-content:center; gap:5px; transition:color .25s; outline:none; user-select:none; position:relative; z-index:1; }
+.cur-toggle.active { color:#fff; }
 .cur-sym { font-size:14px; font-weight:900; }
+.dep-req-card { background:rgba(7,16,42,0.42); border:1px solid rgba(45,122,255,0.15); border-radius:18px; padding:13px 15px; display:flex; align-items:center; gap:10px; backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); transform:translateZ(0); }
+.dep-req-status { font-size:9px; font-weight:900; letter-spacing:.05em; text-transform:uppercase; border-radius:6px; padding:2px 7px; flex-shrink:0; }
+.dep-req-status.pending  { background:rgba(245,158,11,0.15); color:#fbbf24; border:1px solid rgba(245,158,11,0.25); }
+.dep-req-status.done     { background:rgba(34,197,94,0.15);  color:#4ade80; border:1px solid rgba(34,197,94,0.25); }
+.dep-req-status.rejected { background:rgba(239,68,68,0.12);  color:#f87171; border:1px solid rgba(239,68,68,0.2); }
+.dep-req-info { flex:1; }
+.dep-req-amount { font-size:14px; font-weight:900; color:var(--soft); }
+.dep-req-date   { font-size:10.5px; color:var(--muted); font-weight:600; margin-top:1px; }
+.dep-cancel-btn { background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.2); border-radius:10px; padding:5px 10px; color:#f87171; font-family:'Nunito',sans-serif; font-size:11px; font-weight:800; cursor:pointer; outline:none; flex-shrink:0; }
 .wallet-balance {
   background:linear-gradient(135deg,rgba(19,88,184,0.28),rgba(45,122,255,0.12));
   border:1px solid rgba(45,122,255,0.22); border-radius:28px;
@@ -451,37 +462,64 @@ html,body { height:100%; background:var(--bg); font-family:'Nunito',sans-serif; 
     <!-- ═══ КОШЕЛЁК ═══ -->
     <div class="page" id="page-wallet">
       <div class="page-header"><div class="page-title">Кошелёк</div></div>
-      <div class="cur-toggle-wrap">
+
+      <!-- Слайдер валют как нижнее меню -->
+      <div class="cur-toggle-wrap" id="walletToggle">
+        <div class="cur-toggle-slider" id="walletSlider"></div>
         <button class="cur-toggle active" id="togUSD" onclick="switchWallet('USD')"><span class="cur-sym">$</span> Доллар</button>
         <button class="cur-toggle" id="togRUB" onclick="switchWallet('RUB')"><span class="cur-sym">₽</span> Рубль</button>
       </div>
-      <div class="wallet-balance" id="walletUSD">
-        <div class="wallet-label">Баланс в долларах</div>
-        <div class="wallet-amount"><span id="walletAmountUSD">0,00</span> <span style="font-size:18px;opacity:.45">$</span></div>
-        <div class="wallet-sub">виртуальная валюта · для игр в $</div>
+
+      <!-- Баланс с анимацией -->
+      <div class="wallet-balance" style="transform:translateZ(0)">
+        <div class="wallet-label" id="walletLabel">Баланс в долларах</div>
+        <div class="wallet-amount">
+          <span id="walletAmountDisplay" style="transition:opacity .25s,transform .25s">0,00</span>
+          <span id="walletCurSign" style="font-size:18px;opacity:.45;transition:opacity .25s"> $</span>
+        </div>
       </div>
-      <div class="wallet-balance" id="walletRUB" style="display:none">
-        <div class="wallet-label">Баланс в рублях</div>
-        <div class="wallet-amount"><span id="walletAmountRUB">0,00</span> <span style="font-size:18px;opacity:.45">₽</span></div>
-        <div class="wallet-sub">виртуальная валюта · для игр в ₽</div>
-      </div>
+
       <div class="wallet-actions">
-        <button class="wallet-btn primary" onclick="alert('Скоро!')">
+        <button class="wallet-btn primary" onclick="openDepositModal()">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Пополнить
         </button>
-        <button class="wallet-btn secondary" onclick="alert('Скоро!')">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+        <button class="wallet-btn secondary" style="transform:translateZ(0)" onclick="toggleHistory()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           История
         </button>
       </div>
-      <div class="tx-list">
-        <div class="tx-item">
+
+      <!-- Запросы пополнения -->
+      <div id="depositRequests" style="display:none;flex-direction:column;gap:8px;margin-bottom:4px"></div>
+
+      <!-- История транзакций -->
+      <div class="tx-list" id="walletHistory" style="display:none">
+        <div class="tx-item" style="transform:translateZ(0)">
           <div class="tx-dot bonus"></div>
           <div class="tx-info"><div class="tx-name">Стартовый бонус</div><div class="tx-time">Сегодня</div></div>
-          <div class="tx-val bonus">+1 000,00 $</div>
+          <div class="tx-val bonus">+50,00 $</div>
         </div>
       </div>
+    </div>
+
+    <!-- МОДАЛКА ПОПОЛНЕНИЯ -->
+    <div class="modal" id="modalDeposit">
+      <div class="modal-header">
+        <div class="modal-title">Запрос пополнения</div>
+        <button class="modal-close" onclick="closeModal()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      </div>
+      <div class="modal-field">
+        <div class="modal-label">Валюта</div>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <button id="depBtnUSD" onclick="setDepCur('USD')" style="flex:1;padding:10px;border-radius:14px;border:1.5px solid rgba(45,122,255,0.4);background:rgba(45,122,255,0.15);color:var(--soft);font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;cursor:pointer;outline:none;transition:all .2s">$ Доллар</button>
+          <button id="depBtnRUB" onclick="setDepCur('RUB')" style="flex:1;padding:10px;border-radius:14px;border:1.5px solid rgba(45,122,255,0.15);background:transparent;color:var(--muted);font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;cursor:pointer;outline:none;transition:all .2s">₽ Рубль</button>
+        </div>
+        <div class="modal-label">Сумма</div>
+        <input class="modal-input" id="depositAmount" type="number" placeholder="Введи сумму" min="1">
+      </div>
+      <div class="modal-msg" id="depositMsg"></div>
+      <button class="modal-btn" onclick="submitDeposit()">Запросить</button>
     </div>
 
     <!-- ═══ ПРОФИЛЬ ═══ -->
@@ -638,22 +676,66 @@ html,body { height:100%; background:var(--bg); font-family:'Nunito',sans-serif; 
   const cv=document.getElementById('bgCanvas'),ctx=cv.getContext('2d');
   let W,H,mouse={x:-9999,y:-9999};
   const mob=/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)||innerWidth<768;
-  const N=mob?50:100,CONN=mob?90:120,ATT=130;
+  const N=mob?55:110,CONN=mob?90:120,ATT=130;
   const COLS=['#2d7aff','#5599ff','#1358b8','#90bbff','#0d47a1'],ps=[];
+  // Shooting stars
+  const stars=[];
   function resize(){W=cv.width=innerWidth;H=cv.height=innerHeight;}
   addEventListener('resize',resize);resize();
   addEventListener('mousemove',e=>{mouse.x=e.clientX;mouse.y=e.clientY;});
   addEventListener('touchmove',e=>{if(e.touches[0]){mouse.x=e.touches[0].clientX;mouse.y=e.touches[0].clientY;}},{passive:true});
   addEventListener('touchend',()=>{mouse.x=-9999;mouse.y=-9999;},{passive:true});
+
   class P{
     constructor(){this.init(true);}
-    init(r){this.x=Math.random()*W;this.y=r?Math.random()*H:(Math.random()>.5?-10:H+10);this.vx=(Math.random()-.5)*.35;this.vy=(Math.random()-.5)*.35;this.r=Math.random()*1.8+.4;this.col=COLS[Math.floor(Math.random()*COLS.length)];this.a=Math.random()*.5+.15;this.da=(Math.random()*.002+.001)*(Math.random()>.5?1:-1);this.glow=!mob&&Math.random()>.85;this.gp=Math.random()*Math.PI*2;}
+    init(r){this.x=Math.random()*W;this.y=r?Math.random()*H:(Math.random()>.5?-10:H+10);this.vx=(Math.random()-.5)*.35;this.vy=(Math.random()-.5)*.35;this.r=Math.random()*1.8+.4;this.col=COLS[Math.floor(Math.random()*COLS.length)];this.a=Math.random()*.5+.15;this.da=(Math.random()*.002+.001)*(Math.random()>.5?1:-1);this.glow=!mob&&Math.random()>.82;this.gp=Math.random()*Math.PI*2;}
     update(){const dx=mouse.x-this.x,dy=mouse.y-this.y,d=Math.hypot(dx,dy);if(d<ATT&&d>1){const f=(ATT-d)/ATT*.011;this.vx+=dx/d*f;this.vy+=dy/d*f;}this.vx*=.993;this.vy*=.993;this.x+=this.vx;this.y+=this.vy;this.a+=this.da;if(this.a<.06||this.a>.82)this.da*=-1;this.gp+=.04;if(this.x<-20)this.x=W+20;if(this.x>W+20)this.x=-20;if(this.y<-20)this.y=H+20;if(this.y>H+20)this.y=-20;}
     draw(){ctx.save();ctx.globalAlpha=this.a;if(this.glow){const g=ctx.createRadialGradient(this.x,this.y,0,this.x,this.y,this.r*5+Math.sin(this.gp)*2);g.addColorStop(0,this.col);g.addColorStop(1,'transparent');ctx.fillStyle=g;ctx.beginPath();ctx.arc(this.x,this.y,this.r*5+Math.sin(this.gp)*2,0,Math.PI*2);ctx.fill();}ctx.fillStyle=this.col;ctx.shadowColor=this.col;ctx.shadowBlur=this.glow?8:3;ctx.beginPath();ctx.arc(this.x,this.y,this.r,0,Math.PI*2);ctx.fill();ctx.restore();}
   }
+
+  // Shooting star class
+  class Star{
+    constructor(){this.reset();}
+    reset(){this.x=Math.random()*W;this.y=Math.random()*H*.4;this.len=Math.random()*80+40;this.speed=Math.random()*4+3;this.a=0;this.maxA=Math.random()*.6+.2;this.life=0;this.maxLife=Math.random()*40+30;this.angle=Math.PI/4+Math.random()*.2-.1;}
+    update(){this.x+=Math.cos(this.angle)*this.speed;this.y+=Math.sin(this.angle)*this.speed;this.life++;if(this.life<10)this.a=this.maxA*this.life/10;else if(this.life>this.maxLife-10)this.a=this.maxA*(this.maxLife-this.life)/10;if(this.life>=this.maxLife)this.reset();}
+    draw(){ctx.save();ctx.globalAlpha=this.a;ctx.strokeStyle='rgba(144,187,255,0.8)';ctx.lineWidth=1.2;ctx.shadowColor='#90bbff';ctx.shadowBlur=6;ctx.beginPath();ctx.moveTo(this.x,this.y);ctx.lineTo(this.x-Math.cos(this.angle)*this.len,this.y-Math.sin(this.angle)*this.len);ctx.stroke();ctx.restore();}
+  }
+
   for(let i=0;i<N;i++)ps.push(new P());
+  if(!mob){ for(let i=0;i<3;i++){const s=new Star();s.life=Math.floor(Math.random()*s.maxLife);stars.push(s);} }
+
   function lines(){for(let i=0;i<ps.length;i++)for(let j=i+1;j<ps.length;j++){const a=ps[i],b=ps[j],d=Math.hypot(a.x-b.x,a.y-b.y);if(d<CONN){ctx.save();ctx.globalAlpha=(1-d/CONN)*.25;ctx.strokeStyle='#2d7aff';ctx.lineWidth=.55;if(!mob){ctx.shadowColor='#2d7aff';ctx.shadowBlur=2;}ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore();}}}
-  function loop(){ctx.clearRect(0,0,W,H);const g=ctx.createRadialGradient(W*.5,H*.5,0,W*.5,H*.5,Math.max(W,H)*.8);g.addColorStop(0,'#060f24');g.addColorStop(.6,'#040b1a');g.addColorStop(1,'#020609');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);lines();ps.forEach(p=>{p.update();p.draw();});requestAnimationFrame(loop);}
+
+  let t=0;
+  function loop(){
+    t++;
+    ctx.clearRect(0,0,W,H);
+    // Multi-point gradient background — живее чем один градиент
+    const g=ctx.createRadialGradient(W*.5,H*.5,0,W*.5,H*.5,Math.max(W,H)*.8);
+    g.addColorStop(0,'#07112a');
+    g.addColorStop(.4,'#050e1f');
+    g.addColorStop(1,'#020609');
+    ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+    // Nebula blobs
+    if(!mob){
+      const nb=[
+        {x:W*.15,y:H*.25,r:W*.18,c:'rgba(19,88,184,0.06)'},
+        {x:W*.85,y:H*.7, r:W*.2, c:'rgba(45,122,255,0.05)'},
+        {x:W*.5, y:H*.5, r:W*.25,c:'rgba(13,71,161,0.04)'},
+      ];
+      nb.forEach(n=>{
+        const ng=ctx.createRadialGradient(n.x,n.y,0,n.x,n.y,n.r);
+        ng.addColorStop(0,n.c);ng.addColorStop(1,'transparent');
+        ctx.fillStyle=ng;ctx.beginPath();ctx.arc(n.x,n.y,n.r,0,Math.PI*2);ctx.fill();
+      });
+    }
+    // Mouse glow
+    if(mouse.x>0){const mg=ctx.createRadialGradient(mouse.x,mouse.y,0,mouse.x,mouse.y,ATT*.7);mg.addColorStop(0,'rgba(45,122,255,0.07)');mg.addColorStop(1,'transparent');ctx.fillStyle=mg;ctx.beginPath();ctx.arc(mouse.x,mouse.y,ATT*.7,0,Math.PI*2);ctx.fill();}
+    stars.forEach(s=>{s.update();s.draw();});
+    lines();
+    ps.forEach(p=>{p.update();p.draw();});
+    requestAnimationFrame(loop);
+  }
   loop();
 })();
 </script>
@@ -662,7 +744,7 @@ html,body { height:100%; background:var(--bg); font-family:'Nunito',sans-serif; 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, doc, getDoc, updateDoc, collection, query, where, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, doc, getDoc, updateDoc, collection, query, where, orderBy, limit, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const app  = initializeApp({ apiKey:"AIzaSyBnPmUMDLSS1pjFzE0aU46BB2h0sxkmUCg",authDomain:"casino-89385.firebaseapp.com",projectId:"casino-89385",storageBucket:"casino-89385.firebasestorage.app",messagingSenderId:"315653962787",appId:"1:315653962787:web:d2df833858d76ff9638596" });
 const auth = getAuth(app);
@@ -701,6 +783,7 @@ onAuthStateChanged(auth, async user => {
 
       fillUI(d.username||authName, d.createdAt, d.balance||0, d.balanceRUB||0, d.uid);
       loadHistory(user.uid);
+      loadDepositRequests(user.uid);
 
       // Показать кнопку админки
       if (d.role==='admin'||d.role==='owner'){
@@ -730,6 +813,62 @@ async function checkNotifications(uid){
 }
 
 window.closeWarning = () => { document.getElementById('warnOverlay').style.display='none'; };
+
+// Deposit requests
+async function loadDepositRequests(uid){
+  try {
+    const q = query(collection(db,'depositRequests'), where('uid','==',uid), orderBy('createdAt','desc'), limit(10));
+    const snap = await getDocs(q);
+    const box = document.getElementById('depositRequests');
+    if(!box) return;
+    box.innerHTML = '';
+    if(snap.empty){ box.style.display='none'; return; }
+    box.style.display='flex';
+    snap.forEach(d => {
+      const data = d.data();
+      const date = new Date(data.createdAt).toLocaleDateString('ru',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+      const statusMap = {pending:'pending',approved:'done',rejected:'rejected'};
+      const labelMap  = {pending:'Ожидает',approved:'Одобрено',rejected:'Отклонено'};
+      const st = statusMap[data.status]||'pending';
+      const cancelBtn = data.status==='pending'
+        ? `<button class="dep-cancel-btn" onclick="cancelDeposit('${d.id}')">Отменить</button>` : '';
+      box.innerHTML += `<div class="dep-req-card">
+        <div class="dep-req-status ${st}">${labelMap[data.status]||'Ожидает'}</div>
+        <div class="dep-req-info">
+          <div class="dep-req-amount">+${fmt(data.amount)} ${data.currency==='RUB'?'₽':'$'}</div>
+          <div class="dep-req-date">${date}</div>
+        </div>${cancelBtn}</div>`;
+    });
+  } catch(e){ /* ok */ }
+}
+
+window.submitDeposit = async () => {
+  const amount = parseFloat(document.getElementById('depositAmount').value);
+  const msg = document.getElementById('depositMsg');
+  msg.className='modal-msg';
+  if(!amount||amount<=0){ msg.textContent='Введи сумму'; msg.className='modal-msg error'; return; }
+  const btn = document.querySelector('#modalDeposit .modal-btn');
+  btn.disabled=true; btn.textContent='Отправляем...';
+  try {
+    await addDoc(collection(db,'depositRequests'),{
+      uid: currentUser.uid,
+      username: document.getElementById('profileName').textContent,
+      amount, currency: depositCur,
+      status:'pending',
+      createdAt:new Date().toISOString()
+    });
+    msg.textContent='Запрос отправлен!'; msg.className='modal-msg success';
+    setTimeout(()=>{ closeModal(); loadDepositRequests(currentUser.uid); }, 1000);
+  } catch(e){ msg.textContent='Ошибка: '+e.message; msg.className='modal-msg error'; }
+  btn.disabled=false; btn.textContent='Запросить';
+};
+
+window.cancelDeposit = async (id) => {
+  try {
+    await updateDoc(doc(db,'depositRequests',id),{status:'rejected'});
+    loadDepositRequests(currentUser.uid);
+  } catch(e){ alert('Ошибка: '+e.message); }
+};
 
 async function loadHistory(uid) {
   try {
@@ -831,24 +970,94 @@ let activeCur='USD', balances={USD:0,RUB:0};
 
 function fmt(n){ return Number(n).toLocaleString('ru',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 
+function positionWalletSlider(btn, animate){
+  const wrap   = document.getElementById('walletToggle');
+  const slider = document.getElementById('walletSlider');
+  if(!wrap||!slider) return;
+  if(animate) slider.classList.add('animated');
+  slider.style.left  = btn.offsetLeft + 'px';
+  slider.style.width = btn.offsetWidth + 'px';
+}
+
+function animateBal(newVal){
+  const el = document.getElementById('walletAmountDisplay');
+  if(!el) return;
+  el.style.opacity='0'; el.style.transform='translateY(6px)';
+  setTimeout(()=>{
+    el.textContent = fmt(newVal);
+    el.style.transition='opacity .22s,transform .22s';
+    el.style.opacity='1'; el.style.transform='translateY(0)';
+    setTimeout(()=>{ el.style.transition=''; }, 250);
+  }, 150);
+}
+
 function updateBal(){
   document.getElementById('curSymbol').textContent   = activeCur==='USD'?'$':'₽';
   document.getElementById('balanceDisplay').textContent = fmt(balances[activeCur]);
 }
+
 function switchWallet(cur){
-  activeCur=cur;
-  document.getElementById('walletUSD').style.display=cur==='USD'?'':'none';
-  document.getElementById('walletRUB').style.display=cur==='RUB'?'':'none';
-  document.getElementById('togUSD').classList.toggle('active',cur==='USD');
-  document.getElementById('togRUB').classList.toggle('active',cur==='RUB');
+  const prev = activeCur;
+  activeCur = cur;
+  const usdBtn = document.getElementById('togUSD');
+  const rubBtn = document.getElementById('togRUB');
+  usdBtn.classList.toggle('active', cur==='USD');
+  rubBtn.classList.toggle('active', cur==='RUB');
+  positionWalletSlider(cur==='USD'?usdBtn:rubBtn, true);
+  // Update wallet card labels
+  const label = document.getElementById('walletLabel');
+  const sign  = document.getElementById('walletCurSign');
+  if(label) label.textContent = cur==='USD' ? 'Баланс в долларах' : 'Баланс в рублях';
+  if(sign)  sign.textContent  = cur==='USD' ? ' $' : ' ₽';
+  // Animate balance value
+  if(cur !== prev) animateBal(balances[cur]);
   updateBal();
 }
+
+function toggleHistory(){
+  const el = document.getElementById('walletHistory');
+  if(!el) return;
+  const visible = el.style.display !== 'none';
+  el.style.display = visible ? 'none' : 'flex';
+  el.style.flexDirection = 'column';
+  el.style.gap = '9px';
+}
+
+// Deposit request currency
+let depositCur = 'USD';
+function setDepCur(cur){
+  depositCur = cur;
+  const usd = document.getElementById('depBtnUSD');
+  const rub = document.getElementById('depBtnRUB');
+  if(cur==='USD'){
+    usd.style.borderColor='rgba(45,122,255,0.4)'; usd.style.background='rgba(45,122,255,0.15)'; usd.style.color='var(--soft)';
+    rub.style.borderColor='rgba(45,122,255,0.15)'; rub.style.background='transparent'; rub.style.color='var(--muted)';
+  } else {
+    rub.style.borderColor='rgba(45,122,255,0.4)'; rub.style.background='rgba(45,122,255,0.15)'; rub.style.color='var(--soft)';
+    usd.style.borderColor='rgba(45,122,255,0.15)'; usd.style.background='transparent'; usd.style.color='var(--muted)';
+  }
+}
+window.setDepCur = setDepCur;
+
+window.openDepositModal = () => {
+  depositCur = activeCur;
+  setDepCur(activeCur);
+  document.getElementById('depositAmount').value = '';
+  document.getElementById('depositMsg').className = 'modal-msg';
+  openModal('modalDeposit');
+};
+
+window.toggleHistory = toggleHistory;
+
+fillUI.__walletSliderInited = false;
+
 function fillUI(name,createdAt,balUSD,balRUB,uid){
   balances.USD=balUSD||0; balances.RUB=balRUB||0;
   document.getElementById('profileName').textContent=name||'Игрок';
   document.getElementById('avatarEl').textContent=(name||'?')[0].toUpperCase();
-  document.getElementById('walletAmountUSD').textContent=fmt(balances.USD);
-  document.getElementById('walletAmountRUB').textContent=fmt(balances.RUB);
+  // Update wallet display
+  const dispEl = document.getElementById('walletAmountDisplay');
+  if(dispEl) dispEl.textContent = fmt(balances[activeCur]);
   updateBal();
   const d=createdAt?new Date(createdAt):new Date();
   const m=['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
@@ -856,6 +1065,17 @@ function fillUI(name,createdAt,balUSD,balRUB,uid){
   const badge=document.getElementById('profileUidBadge');
   if(uid){ badge.textContent='#'+uid; badge.style.display='block'; } else { badge.style.display='none'; }
 }
+
+// Init wallet slider on page load
+document.addEventListener('DOMContentLoaded',()=>{
+  const usdBtn = document.getElementById('togUSD');
+  if(usdBtn){
+    positionWalletSlider(usdBtn, false);
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      document.getElementById('walletSlider')?.classList.add('animated');
+    }));
+  }
+});
 
 // Currency dropdown
 document.addEventListener('DOMContentLoaded',()=>{
