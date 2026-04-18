@@ -195,13 +195,23 @@ window.checkKey = async () => {
 };
 
 window.searchUser = async () => {
-  const name = document.getElementById('usernameSearch').value.trim().toLowerCase();
+  const raw  = document.getElementById('usernameSearch').value.trim();
+  const name = raw.toLowerCase();
   document.getElementById('userFoundBox').style.display = 'none';
   document.getElementById('step2msg').className = 'msg';
   if (!name){ showMsg('step2msg','Введи никнейм','err'); return; }
   try {
-    const snap = await getDocs(query(collection(db,'users'), where('username','==',name)));
-    if (snap.empty){ showMsg('step2msg','Аккаунт не найден','err'); return; }
+    // Пробуем точное совпадение сначала
+    let snap = await getDocs(query(collection(db,'users'), where('username','==',raw)));
+    // Если не нашли — ищем без учёта регистра по всем документам
+    if (snap.empty){
+      const all = await getDocs(collection(db,'users'));
+      const match = all.docs.find(d => (d.data().username||'').toLowerCase() === name);
+      if (match){
+        snap = { docs: [match], empty: false };
+      }
+    }
+    if (!snap.docs || snap.docs.length === 0){ showMsg('step2msg','Аккаунт не найден','err'); return; }
     const d = snap.docs[0];
     foundUserDoc = { id: d.id, ...d.data() };
     document.getElementById('foundAv').textContent   = foundUserDoc.username[0].toUpperCase();
