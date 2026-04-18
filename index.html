@@ -25,7 +25,11 @@
   const auth = getAuth(app);
   const db   = getFirestore(app);
 
-  onAuthStateChanged(auth, user => { if (user) location.href = "game.html"; });
+  let isRegistering = false; // флаг что идёт регистрация — не редиректить
+
+  onAuthStateChanged(auth, user => {
+    if (user && !isRegistering) location.href = "game.html";
+  });
 
   function fakeEmail(u){ return u.toLowerCase().replace(/[^a-z0-9_]/g,'') + '@67casino.game'; }
 
@@ -54,6 +58,7 @@
     if (u.length < 3){ showMsg('reg','Никнейм минимум 3 символа','error'); return; }
     if (p.length < 6){ showMsg('reg','Пароль минимум 6 символов','error'); return; }
     setLoad('regBtn', true, regIcon, '');
+    isRegistering = true;
     try {
       // Получаем следующий uid через счётчик в Firestore
       const counterRef = doc(db, 'meta', 'counter');
@@ -80,6 +85,7 @@
       showMsg('reg', `Аккаунт создан! Твой ID: #${uid}`, 'success');
       setTimeout(() => location.href = 'game.html', 1000);
     } catch(e){
+      isRegistering = false;
       console.error('Reg error:', e.code, e.message);
       let m = 'Ошибка регистрации';
       if (e.code === 'auth/email-already-in-use') m = 'Такой никнейм уже занят';
