@@ -8,490 +8,470 @@
 <style>
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
-
 :root {
-  --bg:      #030912;
-  --blue2:   #1358b8;
-  --accent:  #2d7aff;
-  --soft:    #90bbff;
-  --text:    #e6f0ff;
-  --muted:   #4e6f9e;
-  --card-bg: rgba(7,16,42,0.52);
-  --border:  rgba(45,122,255,0.18);
-  --nav-h:   74px;
+  --bg: #030912; --blue2: #1358b8; --accent: #2d7aff;
+  --soft: #90bbff; --text: #e6f0ff; --muted: #4e6f9e;
+  --card-bg: rgba(7,16,42,0.52); --border: rgba(45,122,255,0.18);
+  --inp-bg: rgba(3,9,26,0.68);
 }
-
-html, body {
-  height: 100%; width: 100%;
-  background: var(--bg);
-  font-family: 'Nunito', sans-serif;
-  color: var(--text);
-  overflow: hidden;
-}
-
-/* ── CANVAS BG ── */
+html,body { height:100%; background:var(--bg); font-family:'Nunito',sans-serif; color:var(--text); overflow:hidden; }
 #bgCanvas { position:fixed; inset:0; z-index:0; }
 
-/* ── MAIN LAYOUT ── */
+/* Desktop: центрируем как мобилку */
 .app {
-  position: relative; z-index: 1;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
+  position:relative; z-index:1; height:100vh; display:flex; flex-direction:column;
+  max-width:480px; margin:0 auto;
 }
+.pages { flex:1; position:relative; overflow:hidden; }
 
-/* ── PAGE AREA ── */
-.pages {
-  flex: 1;
-  position: relative;
-  overflow: hidden;
-  padding-bottom: var(--nav-h);
-}
-
+/* PAGE */
 .page {
-  position: absolute;
-  inset: 0;
-  padding: 24px 20px;
-  overflow-y: auto;
-  opacity: 0;
-  pointer-events: none;
-  transform: translateX(40px);
-  transition: opacity .35s cubic-bezier(.4,0,.2,1), transform .35s cubic-bezier(.4,0,.2,1);
-  /* Force GPU layer so backdrop-filter on children stays alive */
-  will-change: transform;
-  -webkit-transform: translateX(40px);
+  position:absolute; inset:0;
+  padding:20px 16px; padding-bottom:90px;
+  overflow-y:auto; pointer-events:none;
+  visibility:hidden;
+  transform:translateX(60px);
+  transition:transform .36s cubic-bezier(.4,0,.2,1);
+  will-change:transform;
 }
-.page.active {
-  opacity: 1;
-  pointer-events: all;
-  transform: translateX(0);
-  -webkit-transform: translateX(0);
-}
-.page.exit-left  { transform: translateX(-40px); -webkit-transform: translateX(-40px); }
-.page.exit-right { transform: translateX(40px);  -webkit-transform: translateX(40px); }
+.page.active { pointer-events:all; visibility:visible; transform:translateX(0); }
+.game-card,.bonus-card,.wallet-balance,.wallet-btn,.tx-item,.profile-card,.stat-card,.profile-row { transform:translateZ(0); -webkit-transform:translateZ(0); }
 
-/* Cards get their own GPU layer so backdrop-filter survives parent opacity anim */
-.game-card, .bonus-card, .wallet-balance, .wallet-btn,
-.tx-item, .profile-card, .stat-card, .profile-row {
-  transform: translateZ(0);
-  -webkit-transform: translateZ(0);
-}
+/* PAGE HEADER */
+.page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; padding-top:6px; }
+.page-title { font-size:22px; font-weight:900; letter-spacing:.01em; background:linear-gradient(135deg,#fff 30%,var(--soft) 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
 
-/* ── PAGE HEADER ── */
-.page-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 28px;
-  padding-top: 8px;
-}
-.page-title {
-  font-size: 24px;
-  font-weight: 900;
-  letter-spacing: .01em;
-  background: linear-gradient(135deg, #fff 30%, var(--soft) 100%);
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-}
+/* BALANCE PILL */
 .balance-pill {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  background: rgba(45,122,255,0.1);
-  border: 1px solid rgba(45,122,255,0.2);
-  border-radius: 20px;
-  padding: 7px 14px;
-  font-size: 13px;
-  font-weight: 800;
-  color: var(--soft);
+  display:flex; align-items:center;
+  background:rgba(4,9,26,0.55); border:1px solid rgba(45,122,255,0.18);
+  border-radius:999px; height:36px; position:relative; z-index:300;
 }
-.balance-pill svg { opacity: .7; }
+.bal-currency {
+  display:flex; align-items:center; gap:4px;
+  padding:0 10px; height:100%; cursor:pointer;
+  border-right:1px solid rgba(45,122,255,0.15);
+  border-radius:999px 0 0 999px;
+  user-select:none; position:relative;
+}
+.bal-currency-symbol { font-size:13px; font-weight:900; color:var(--soft); }
+.bal-chevron { color:var(--muted); display:flex; transition:transform .25s; }
+.bal-currency.open .bal-chevron { transform:rotate(180deg); }
+.bal-value { padding:0 10px; font-size:13px; font-weight:800; color:var(--soft); white-space:nowrap; }
+.bal-add {
+  display:flex; align-items:center; justify-content:center;
+  width:26px; height:26px; margin-right:4px; border-radius:50%;
+  background:linear-gradient(135deg,var(--blue2),var(--accent));
+  cursor:pointer; flex-shrink:0; transition:transform .18s;
+  box-shadow:0 2px 10px rgba(45,122,255,0.35);
+}
+.bal-add:active { transform:scale(.88); }
+.bal-add svg { color:#fff; }
+.cur-dropdown {
+  position:absolute; top:calc(100% + 10px); left:0;
+  background:rgba(6,14,38,0.97); border:1px solid rgba(45,122,255,0.25);
+  border-radius:18px; overflow:hidden;
+  backdrop-filter:blur(40px); -webkit-backdrop-filter:blur(40px);
+  box-shadow:0 16px 48px rgba(0,0,0,0.6),inset 0 1px 0 rgba(255,255,255,0.06);
+  z-index:500; min-width:140px;
+  transform:scale(.9) translateY(-6px); opacity:0; pointer-events:none;
+  transition:transform .25s cubic-bezier(.34,1.56,.64,1), opacity .2s;
+}
+.cur-dropdown.open { transform:scale(1) translateY(0); opacity:1; pointer-events:all; }
+.cur-option {
+  display:flex; align-items:center; gap:10px;
+  padding:12px 14px; font-size:13px; font-weight:800; color:var(--muted);
+  cursor:pointer; transition:background .15s,color .15s; position:relative;
+}
+.cur-option+.cur-option { border-top:1px solid rgba(45,122,255,0.08); }
+.cur-option:active { background:rgba(45,122,255,0.1); }
+.cur-option.active { color:#fff; }
+.cur-option.active::after { content:''; position:absolute; right:14px; width:6px; height:6px; border-radius:50%; background:var(--accent); box-shadow:0 0 8px rgba(45,122,255,0.7); }
+.cur-option-sym { font-size:14px; font-weight:900; color:var(--soft); background:rgba(45,122,255,0.15); border-radius:7px; padding:2px 6px; }
 
-/* ── GAME CARDS ── */
-.games-grid {
+/* ═══ GAMES PAGE ═══ */
+.games-page { display:flex; flex-direction:column; gap:18px; }
+
+/* BANNERS GRID */
+.banners-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 14px;
+  gap: 10px;
+  height: 180px;
 }
-.game-card {
-  background: rgba(7,16,42,0.38);
-  border: 1px solid rgba(45,122,255,0.14);
-  border-radius: 28px;
-  padding: 22px 18px;
-  cursor: pointer;
-  transition: transform .2s, box-shadow .2s, border-color .2s;
-  backdrop-filter: blur(28px) saturate(1.5);
-  -webkit-backdrop-filter: blur(28px) saturate(1.5);
-  position: relative;
-  overflow: hidden;
-}
-.game-card::before {
-  content: '';
-  position: absolute; top: 0; left: 0; right: 0; height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.09), transparent);
-}
-.game-card:active { transform: scale(.97); }
-.game-card:hover  { border-color: rgba(45,122,255,0.3); box-shadow: 0 8px 32px rgba(45,122,255,0.12); }
-.game-card.featured {
-  grid-column: 1 / -1;
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  padding: 24px 22px;
-  border-color: rgba(45,122,255,0.22);
-  background: linear-gradient(135deg, rgba(19,88,184,0.22) 0%, rgba(7,16,42,0.45) 100%);
-}
-.game-icon {
-  width: 52px; height: 52px;
-  background: linear-gradient(135deg, var(--blue2), var(--accent));
-  border-radius: 16px;
-  display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 4px 20px rgba(45,122,255,0.4);
-  flex-shrink: 0;
-}
-.game-icon.small { width: 44px; height: 44px; border-radius: 14px; margin-bottom: 14px; }
-.game-icon svg { color: #fff; }
-.game-name { font-size: 16px; font-weight: 800; margin-bottom: 4px; }
-.game-desc { font-size: 12px; color: var(--muted); font-weight: 600; line-height: 1.4; }
-.game-badge {
-  position: absolute; top: 14px; right: 14px;
-  background: linear-gradient(135deg, #ff6b35, #ff3d71);
-  border-radius: 8px;
-  padding: 3px 8px;
-  font-size: 10px;
-  font-weight: 900;
-  letter-spacing: .05em;
-  text-transform: uppercase;
-  color: #fff;
-}
+.banners-col { display:flex; flex-direction:column; gap:10px; }
 
-/* ── BONUS CARDS ── */
-.bonus-list { display: flex; flex-direction: column; gap: 12px; }
-.bonus-card {
-  background: rgba(7,16,42,0.38);
-  border: 1px solid rgba(45,122,255,0.12);
-  border-radius: 26px;
-  padding: 18px 20px;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  backdrop-filter: blur(28px) saturate(1.5);
-  -webkit-backdrop-filter: blur(28px) saturate(1.5);
-  cursor: pointer;
-  transition: transform .2s, border-color .2s;
-}
-.bonus-card:active { transform: scale(.98); }
-.bonus-icon {
-  width: 46px; height: 46px; flex-shrink: 0;
-  border-radius: 14px;
-  display: flex; align-items: center; justify-content: center;
-}
-.bonus-icon.daily  { background: linear-gradient(135deg,#1a6b3c,#22c55e); box-shadow: 0 4px 16px rgba(34,197,94,0.3); }
-.bonus-icon.streak { background: linear-gradient(135deg,#92400e,#f59e0b); box-shadow: 0 4px 16px rgba(245,158,11,0.3); }
-.bonus-icon.promo  { background: linear-gradient(135deg,#5b21b6,#8b5cf6); box-shadow: 0 4px 16px rgba(139,92,246,0.3); }
-.bonus-info { flex: 1; }
-.bonus-name { font-size: 15px; font-weight: 800; margin-bottom: 3px; }
-.bonus-sub  { font-size: 12px; color: var(--muted); font-weight: 600; }
-.bonus-amount {
-  font-size: 15px; font-weight: 900;
-  background: linear-gradient(135deg, #fff, var(--soft));
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-}
-
-/* ── WALLET ── */
-.wallet-balance {
-  background: linear-gradient(135deg, rgba(19,88,184,0.28), rgba(45,122,255,0.12));
-  border: 1px solid rgba(45,122,255,0.22);
-  border-radius: 30px;
-  padding: 28px 24px;
-  text-align: center;
-  margin-bottom: 20px;
-  backdrop-filter: blur(28px) saturate(1.5);
-  -webkit-backdrop-filter: blur(28px) saturate(1.5);
-  position: relative; overflow: hidden;
-}
-.wallet-balance::before {
-  content: '';
-  position: absolute; top:0; left:15%; right:15%; height:1px;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
-}
-.wallet-label { font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
-.wallet-amount {
-  font-size: 42px; font-weight: 900; letter-spacing: -1px;
-  background: linear-gradient(135deg, #fff 20%, var(--soft) 100%);
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-  margin-bottom: 6px;
-}
-.wallet-sub { font-size: 12px; color: var(--muted); font-weight: 600; }
-.wallet-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
-.wallet-btn {
-  padding: 14px;
-  border: none; border-radius: 18px;
-  font-family: 'Nunito', sans-serif;
-  font-size: 14px; font-weight: 800;
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-  transition: transform .2s, box-shadow .2s;
-  outline: none;
-}
-.wallet-btn.primary {
-  background: linear-gradient(135deg, var(--blue2), var(--accent));
-  color: #fff;
-  box-shadow: 0 4px 20px rgba(45,122,255,.35);
-}
-.wallet-btn.secondary {
-  background: rgba(45,122,255,0.1);
-  border: 1px solid rgba(45,122,255,0.2);
-  color: var(--soft);
-}
-.wallet-btn:active { transform: scale(.97); }
-.tx-list { display: flex; flex-direction: column; gap: 10px; }
-.tx-item {
-  background: rgba(7,16,42,0.38);
-  border: 1px solid rgba(45,122,255,0.12);
-  border-radius: 20px;
-  padding: 14px 16px;
-  display: flex; align-items: center; gap: 12px;
-  backdrop-filter: blur(28px); -webkit-backdrop-filter: blur(28px);
-}
-.tx-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.tx-dot.win  { background: #22c55e; box-shadow: 0 0 8px rgba(34,197,94,0.5); }
-.tx-dot.loss { background: #ef4444; box-shadow: 0 0 8px rgba(239,68,68,0.5); }
-.tx-dot.bonus{ background: #f59e0b; box-shadow: 0 0 8px rgba(245,158,11,0.5); }
-.tx-info { flex:1; }
-.tx-name { font-size: 13px; font-weight: 700; }
-.tx-time { font-size: 11px; color: var(--muted); font-weight: 600; margin-top: 2px; }
-.tx-val  { font-size: 14px; font-weight: 900; }
-.tx-val.win   { color: #4ade80; }
-.tx-val.loss  { color: #f87171; }
-.tx-val.bonus { color: #fbbf24; }
-
-/* ── PROFILE ── */
-.profile-card {
-  background: rgba(7,16,42,0.38);
-  border: 1px solid rgba(45,122,255,0.14);
-  border-radius: 30px;
-  padding: 28px 24px;
-  text-align: center;
-  margin-bottom: 18px;
-  backdrop-filter: blur(28px) saturate(1.5); -webkit-backdrop-filter: blur(28px) saturate(1.5);
-}
-.avatar {
-  width: 72px; height: 72px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--blue2), var(--accent));
-  display: flex; align-items: center; justify-content: center;
-  margin: 0 auto 14px;
-  box-shadow: 0 0 0 3px rgba(45,122,255,0.3), 0 8px 24px rgba(45,122,255,0.3);
-  font-size: 28px; font-weight: 900; color: #fff;
-}
-.profile-name { font-size: 20px; font-weight: 900; margin-bottom: 4px; }
-.profile-uid  { font-size: 12px; color: var(--muted); font-weight: 700; letter-spacing: .05em; }
-.stats-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 18px; }
-.stat-card {
-  background: rgba(7,16,42,0.38);
-  border: 1px solid rgba(45,122,255,0.12);
-  border-radius: 24px;
-  padding: 16px 10px;
-  text-align: center;
-  backdrop-filter: blur(28px) saturate(1.5); -webkit-backdrop-filter: blur(28px) saturate(1.5);
-}
-.stat-val  { font-size: 18px; font-weight: 900; color: var(--soft); margin-bottom: 4px; }
-.stat-label{ font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
-.profile-actions { display: flex; flex-direction: column; gap: 10px; }
-.profile-row {
-  background: rgba(7,16,42,0.38);
-  border: 1px solid rgba(45,122,255,0.12);
+/* MAIN BANNER — Краш */
+.banner-main {
   border-radius: 22px;
-  padding: 16px 18px;
-  display: flex; align-items: center; gap: 14px;
-  cursor: pointer;
-  backdrop-filter: blur(28px) saturate(1.5); -webkit-backdrop-filter: blur(28px) saturate(1.5);
-  transition: border-color .2s;
+  background: linear-gradient(145deg, #071330 0%, #0b2460 55%, #091a45 100%);
+  border: 1px solid rgba(45,122,255,0.32);
+  padding: 18px 16px;
+  position: relative; overflow: hidden; cursor: pointer;
+  display: flex; flex-direction: column; justify-content: flex-end;
+  transition: transform .18s; transform: translateZ(0);
 }
-.profile-row:active { opacity: .8; }
-.profile-row svg { color: var(--accent); opacity: .8; flex-shrink: 0; }
-.profile-row-label { flex: 1; font-size: 14px; font-weight: 700; }
-.profile-row-arrow { color: var(--muted); }
-.logout-row { border-color: rgba(239,68,68,0.2); }
-.logout-row svg { color: #f87171; }
-.logout-row .profile-row-label { color: #f87171; }
+.banner-main:active { transform: scale(.97); }
+.banner-main::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 70% 30%, rgba(45,122,255,0.2) 0%, transparent 70%);
+}
+.banner-main::after {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(45,122,255,0.5), transparent);
+}
+.bm-tag {
+  position: absolute; top: 14px; left: 14px; z-index: 2;
+  background: linear-gradient(135deg, #ff6b35, #ff3d71);
+  border-radius: 20px; padding: 2px 9px;
+  font-size: 8.5px; font-weight: 900; letter-spacing: .07em;
+  text-transform: uppercase; color: #fff;
+}
+.bm-deco {
+  position: absolute; bottom: 0; right: 0; z-index: 1;
+  opacity: 0.9;
+}
+.bm-mult {
+  position: absolute; top: 12px; right: 14px; z-index: 2;
+  font-size: 22px; font-weight: 900; letter-spacing: -.5px;
+  background: linear-gradient(135deg, #fff 30%, var(--soft));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  filter: drop-shadow(0 0 12px rgba(45,122,255,0.7));
+}
+.bm-title { position: relative; z-index: 2; font-size: 22px; font-weight: 900; line-height: 1; margin-bottom: 3px; }
+.bm-sub   { position: relative; z-index: 2; font-size: 10.5px; color: rgba(144,187,255,0.75); font-weight: 600; line-height: 1.4; margin-bottom: 10px; }
+.bm-btn {
+  position: relative; z-index: 2;
+  display: inline-flex; align-items: center; gap: 5px;
+  background: linear-gradient(135deg, var(--blue2), var(--accent));
+  border: none; border-radius: 999px; padding: 7px 14px;
+  font-family: 'Nunito', sans-serif; font-size: 11px; font-weight: 900;
+  color: #fff; cursor: pointer; align-self: flex-start;
+  box-shadow: 0 3px 14px rgba(45,122,255,0.4);
+  transition: transform .15s;
+}
+.bm-btn:active { transform: scale(.94); }
 
-/* ── BOTTOM NAV ── */
-.nav-wrap {
-  position: fixed;
-  bottom: 0; left: 0; right: 0;
-  z-index: 100;
+/* SIDE BANNERS */
+.banner-side {
+  flex: 1; border-radius: 18px;
   padding: 0 14px;
-  padding-bottom: max(14px, env(safe-area-inset-bottom));
-  display: flex;
-  justify-content: center;
-}
-
-.nav {
-  width: 100%;
-  max-width: 430px;
-  background: rgba(4, 9, 26, 0.45);
-  backdrop-filter: blur(48px) saturate(2) brightness(1.1);
-  -webkit-backdrop-filter: blur(48px) saturate(2) brightness(1.1);
+  display: flex; align-items: center; gap: 10px;
+  position: relative; overflow: hidden; cursor: pointer;
   border: 1px solid rgba(255,255,255,0.07);
-  border-radius: 999px;
-  padding: 6px;
-  display: flex;
-  align-items: center;
-  position: relative;
-  box-shadow:
-    0 8px 48px rgba(0,0,0,0.55),
-    0 0 0 1px rgba(255,255,255,0.04),
-    inset 0 1px 0 rgba(255,255,255,0.08),
-    inset 0 -1px 0 rgba(0,0,0,0.2);
-  margin-bottom: 8px;
+  transition: transform .18s; transform: translateZ(0);
 }
-
-/* sliding pill — frosted glass look, not solid blue */
-.nav-slider {
-  position: absolute;
-  top: 6px; bottom: 6px;
-  border-radius: 26px;
-  background: rgba(45,122,255,0.22);
-  border: 1px solid rgba(45,122,255,0.35);
-  box-shadow:
-    0 0 24px rgba(45,122,255,0.2),
-    inset 0 1px 0 rgba(255,255,255,0.1);
-  /* No transition on load — set via JS after init */
-  will-change: left, width;
-  pointer-events: none;
+.banner-side:active { transform: scale(.96); }
+.banner-side-bonus  { background: linear-gradient(135deg, #1a0d35 0%, #2d1060 100%); border-color: rgba(139,92,246,0.25); }
+.banner-side-wallet { background: linear-gradient(135deg, #051525 0%, #0d3060 100%); border-color: rgba(14,165,233,0.22); }
+.banner-side::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 80% 50%, rgba(255,255,255,0.05) 0%, transparent 70%);
 }
-.nav-slider.animated {
-  transition: left .38s cubic-bezier(.4,0,.2,1), width .38s cubic-bezier(.4,0,.2,1);
-}
-
-.nav-btn {
+.bs-ico {
+  width: 36px; height: 36px; border-radius: 11px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
   position: relative; z-index: 1;
-  flex: 1;
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  gap: 4px;
-  padding: 10px 4px;
-  border: none; background: transparent;
-  cursor: pointer; border-radius: 26px;
-  font-family: 'Nunito', sans-serif;
-  font-size: 10px; font-weight: 800;
-  color: var(--muted);
-  letter-spacing: .04em;
-  transition: color .28s;
-  outline: none; -webkit-appearance: none; user-select: none;
 }
-.nav-btn svg {
-  transition: transform .3s cubic-bezier(.34,1.56,.64,1), opacity .28s;
-  opacity: .4;
+.bs-text { flex: 1; position: relative; z-index: 1; }
+.bs-title { font-size: 13px; font-weight: 900; margin-bottom: 1px; }
+.bs-sub   { font-size: 10px; color: var(--muted); font-weight: 700; }
+
+/* SECTION */
+.games-section { display:flex; flex-direction:column; gap:11px; }
+.section-title { display:flex; align-items:center; gap:7px; font-size:14px; font-weight:900; }
+.section-title svg { color:var(--accent); opacity:.85; }
+
+/* GAME CARDS */
+.game-cards-row { display:flex; gap:10px; overflow-x:auto; padding-bottom:4px; scrollbar-width:none; -webkit-overflow-scrolling:touch; }
+.game-cards-row::-webkit-scrollbar { display:none; }
+.gcard { flex-shrink:0; width:110px; cursor:pointer; transition:transform .18s; }
+.gcard:active { transform:scale(.93); }
+.gcard-cover { width:110px; height:148px; border-radius:20px; overflow:hidden; margin-bottom:7px; position:relative; box-shadow:0 8px 24px rgba(0,0,0,0.45); }
+.gcard-cover::after { content:''; position:absolute; inset:0; background:linear-gradient(180deg,transparent 40%,rgba(0,0,0,0.4) 100%); }
+.gcard-cover-inner { position:absolute; inset:0; z-index:1; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:8px; }
+.gc-crash    { background:linear-gradient(150deg,#061630,#0d2d6e,#1a5ce0); }
+.gc-coin     { background:linear-gradient(150deg,#1c0e00,#7c3d0e,#e07d1a); }
+.gc-mines    { background:linear-gradient(150deg,#060f06,#0d4020,#12843a); }
+.gc-bj       { background:linear-gradient(150deg,#0c0c1c,#1a1760,#3730b8); }
+.gc-roulette { background:linear-gradient(150deg,#140404,#6b0f0f,#c41a1a); }
+.gc-icon-box { width:58px; height:58px; border-radius:16px; display:flex; align-items:center; justify-content:center; border:1px solid transparent; }
+.gc-label { font-size:13px; font-weight:900; color:rgba(255,255,255,0.85); letter-spacing:-.2px; text-shadow:0 0 12px rgba(255,255,255,0.3); }
+.bj-icon-wrap { position:relative; width:62px; height:68px; }
+.bjc { position:absolute; width:44px; height:60px; background:#fff; border-radius:8px; display:flex; align-items:flex-start; padding:5px 6px; font-size:13px; font-weight:900; box-shadow:0 4px 14px rgba(0,0,0,0.5); }
+.bjc1 { top:0; left:0; color:#1e1b4b; }
+.bjc2 { top:10px; left:16px; color:#dc2626; z-index:1; }
+.roulette-icon { width:60px; height:60px; border-radius:50%; background:conic-gradient(#dc2626 0 30deg,#111 30deg 60deg,#dc2626 60deg 90deg,#111 90deg 120deg,#dc2626 120deg 150deg,#111 150deg 180deg,#dc2626 180deg 210deg,#111 210deg 240deg,#dc2626 240deg 270deg,#111 270deg 300deg,#dc2626 300deg 330deg,#111 330deg 360deg); border:3px solid rgba(255,255,255,0.12); box-shadow:0 0 20px rgba(220,38,38,0.35); display:flex; align-items:center; justify-content:center; }
+.roulette-center { width:20px; height:20px; border-radius:50%; background:#1a0a0a; border:2px solid rgba(255,255,255,0.15); }
+.gcard-info { display:flex; align-items:center; justify-content:space-between; padding:0 2px; }
+.gcard-name { font-size:11.5px; font-weight:800; }
+.gbadge { font-size:8.5px; font-weight:900; letter-spacing:.04em; text-transform:uppercase; border-radius:6px; padding:2px 6px; }
+.gbadge.hot  { background:linear-gradient(135deg,#ff6b35,#ff3d71); color:#fff; }
+.gbadge.soon { background:rgba(45,122,255,0.12); color:var(--soft); border:1px solid rgba(45,122,255,0.18); }
+
+/* GEAR BUTTON */
+.gear-btn {
+  width:36px; height:36px; border-radius:50%;
+  background:rgba(45,122,255,0.1); border:1px solid rgba(45,122,255,0.2);
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer; color:var(--muted); transition:color .2s, background .2s;
+  outline:none;
 }
-.nav-btn.active { color: #fff; }
-.nav-btn.active svg { opacity: 1; transform: scale(1.1); }
+.gear-btn:active { background:rgba(45,122,255,0.2); color:var(--soft); }
+
+/* PROFILE SECTION TITLE */
+.profile-section-title {
+  display:flex; align-items:center; gap:7px;
+  font-size:12px; font-weight:800; color:var(--muted);
+  letter-spacing:.06em; text-transform:uppercase;
+  margin-bottom:10px; margin-top:16px;
+}
+.profile-section-title svg { opacity:.7; }
+
+/* HISTORY */
+.history-list { display:flex; flex-direction:column; gap:8px; }
+.history-empty { text-align:center; padding:20px; color:var(--muted); font-size:12.5px; font-weight:600; opacity:.6; }
+.history-item {
+  background:rgba(7,16,42,0.38); border:1px solid rgba(45,122,255,0.1);
+  border-radius:16px; padding:12px 14px;
+  display:flex; align-items:center; gap:10px;
+  backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); transform:translateZ(0);
+}
+.hi-icon { width:34px; height:34px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.hi-icon.win  { background:rgba(34,197,94,0.15); }
+.hi-icon.loss { background:rgba(239,68,68,0.15); }
+.hi-info { flex:1; }
+.hi-game { font-size:12.5px; font-weight:800; }
+.hi-time { font-size:10.5px; color:var(--muted); font-weight:600; margin-top:1px; }
+.hi-result { font-size:13px; font-weight:900; }
+.hi-result.win  { color:#4ade80; }
+.hi-result.loss { color:#f87171; }
+
+/* MODAL */
+.modal-overlay {
+  position:fixed; inset:0; z-index:400;
+  background:rgba(0,0,0,0.6); backdrop-filter:blur(4px);
+  opacity:0; pointer-events:none;
+  transition:opacity .25s;
+}
+.modal-overlay.open { opacity:1; pointer-events:all; }
+.modal {
+  position:fixed; left:50%; bottom:-100%; z-index:500;
+  transform:translateX(-50%);
+  width:calc(100% - 32px); max-width:448px;
+  background:rgba(6,14,38,0.97); border:1px solid rgba(45,122,255,0.22);
+  border-radius:28px 28px 24px 24px;
+  padding:22px 20px 28px;
+  backdrop-filter:blur(48px); -webkit-backdrop-filter:blur(48px);
+  box-shadow:0 -8px 48px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06);
+  transition:bottom .35s cubic-bezier(.4,0,.2,1);
+}
+.modal.open { bottom:0; }
+.modal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; }
+.modal-title { font-size:17px; font-weight:900; }
+.modal-close { background:rgba(45,122,255,0.1); border:none; border-radius:50%; width:30px; height:30px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--muted); outline:none; }
+.modal-close:active { background:rgba(45,122,255,0.2); }
+.modal-field { margin-bottom:12px; }
+.modal-label { font-size:10.5px; font-weight:800; color:var(--muted); letter-spacing:.08em; text-transform:uppercase; margin-bottom:7px; }
+.modal-input {
+  width:100%; background:rgba(3,9,26,0.7); border:1.5px solid rgba(45,122,255,0.15);
+  border-radius:16px; padding:12px 14px;
+  font-family:'Nunito',sans-serif; font-size:14px; font-weight:600;
+  color:var(--text); outline:none; -webkit-appearance:none;
+  transition:border-color .2s, box-shadow .2s;
+}
+.modal-input:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(45,122,255,0.1); }
+.modal-input::placeholder { color:rgba(78,111,158,.4); }
+.modal-btn {
+  width:100%; padding:13px; margin-top:6px;
+  border:none; border-radius:18px;
+  background:linear-gradient(135deg,var(--blue2),var(--accent));
+  color:#fff; font-family:'Nunito',sans-serif; font-size:14px; font-weight:900;
+  cursor:pointer; box-shadow:0 4px 20px rgba(45,122,255,.35);
+  transition:transform .18s; outline:none;
+}
+.modal-btn:active { transform:scale(.97); }
+.modal-btn:disabled { opacity:.5; cursor:not-allowed; }
+.modal-msg { font-size:12px; font-weight:700; padding:8px 12px; border-radius:12px; margin-bottom:6px; display:none; }
+.modal-msg.error   { background:rgba(255,60,60,.1); color:#ff8888; border:1px solid rgba(255,80,80,.2); display:block; }
+.modal-msg.success { background:rgba(45,122,255,.1); color:var(--soft); border:1px solid rgba(45,122,255,.2); display:block; }
+
+/* ═══ BONUS ═══ */
+.bonus-list { display:flex; flex-direction:column; gap:11px; }
+.bonus-card {
+  background:rgba(7,16,42,0.38); border:1px solid rgba(45,122,255,0.12);
+  border-radius:24px; padding:16px 18px; display:flex; align-items:center; gap:14px;
+  backdrop-filter:blur(28px); -webkit-backdrop-filter:blur(28px); cursor:pointer; transition:transform .18s; transform:translateZ(0);
+}
+.bonus-card:active { transform:scale(.98); }
+.bonus-icon { width:44px; height:44px; border-radius:14px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.bonus-icon.daily  { background:linear-gradient(135deg,#1a6b3c,#22c55e); box-shadow:0 4px 14px rgba(34,197,94,0.3); }
+.bonus-icon.streak { background:linear-gradient(135deg,#92400e,#f59e0b); box-shadow:0 4px 14px rgba(245,158,11,0.3); }
+.bonus-icon.promo  { background:linear-gradient(135deg,#5b21b6,#8b5cf6); box-shadow:0 4px 14px rgba(139,92,246,0.3); }
+.bonus-info { flex:1; }
+.bonus-name { font-size:14px; font-weight:800; margin-bottom:3px; }
+.bonus-sub  { font-size:11px; color:var(--muted); font-weight:600; }
+.bonus-amount { font-size:14px; font-weight:900; background:linear-gradient(135deg,#fff,var(--soft)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+
+/* ═══ WALLET ═══ */
+.cur-toggle-wrap { display:flex; background:rgba(3,9,26,0.58); border:1px solid rgba(45,122,255,0.12); border-radius:999px; padding:5px; margin-bottom:14px; }
+.cur-toggle { flex:1; padding:9px; border:none; background:transparent; font-family:'Nunito',sans-serif; font-size:12.5px; font-weight:800; color:var(--muted); cursor:pointer; border-radius:999px; display:flex; align-items:center; justify-content:center; gap:5px; transition:background .25s,color .25s,box-shadow .25s; outline:none; user-select:none; }
+.cur-toggle.active { background:linear-gradient(135deg,var(--blue2),var(--accent)); color:#fff; box-shadow:0 0 16px rgba(45,122,255,.35); }
+.cur-sym { font-size:14px; font-weight:900; }
+.wallet-balance {
+  background:linear-gradient(135deg,rgba(19,88,184,0.28),rgba(45,122,255,0.12));
+  border:1px solid rgba(45,122,255,0.22); border-radius:28px;
+  padding:24px; text-align:center; margin-bottom:14px;
+  backdrop-filter:blur(28px); -webkit-backdrop-filter:blur(28px); position:relative; overflow:hidden; transform:translateZ(0);
+}
+.wallet-balance::before { content:''; position:absolute; top:0; left:15%; right:15%; height:1px; background:linear-gradient(90deg,transparent,rgba(255,255,255,0.14),transparent); }
+.wallet-label { font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
+.wallet-amount { font-size:36px; font-weight:900; letter-spacing:-1px; background:linear-gradient(135deg,#fff 20%,var(--soft)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; margin-bottom:4px; }
+.wallet-sub { font-size:11px; color:var(--muted); font-weight:600; }
+.wallet-actions { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
+.wallet-btn { padding:13px; border:none; border-radius:18px; font-family:'Nunito',sans-serif; font-size:13px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:7px; transition:transform .18s; outline:none; }
+.wallet-btn.primary { background:linear-gradient(135deg,var(--blue2),var(--accent)); color:#fff; box-shadow:0 4px 18px rgba(45,122,255,.32); }
+.wallet-btn.secondary { background:rgba(45,122,255,0.1); border:1px solid rgba(45,122,255,0.2); color:var(--soft); }
+.wallet-btn:active { transform:scale(.97); }
+.tx-list { display:flex; flex-direction:column; gap:9px; }
+.tx-item { background:rgba(7,16,42,0.38); border:1px solid rgba(45,122,255,0.12); border-radius:18px; padding:13px 15px; display:flex; align-items:center; gap:11px; backdrop-filter:blur(28px); -webkit-backdrop-filter:blur(28px); }
+.tx-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.tx-dot.win   { background:#22c55e; box-shadow:0 0 7px rgba(34,197,94,0.5); }
+.tx-dot.loss  { background:#ef4444; box-shadow:0 0 7px rgba(239,68,68,0.5); }
+.tx-dot.bonus { background:#f59e0b; box-shadow:0 0 7px rgba(245,158,11,0.5); }
+.tx-info { flex:1; }
+.tx-name { font-size:12.5px; font-weight:700; }
+.tx-time { font-size:10.5px; color:var(--muted); font-weight:600; margin-top:2px; }
+.tx-val { font-size:13px; font-weight:900; }
+.tx-val.win   { color:#4ade80; }
+.tx-val.loss  { color:#f87171; }
+.tx-val.bonus { color:#fbbf24; }
+
+/* ═══ PROFILE ═══ */
+.profile-card { background:rgba(7,16,42,0.38); border:1px solid rgba(45,122,255,0.14); border-radius:28px; padding:26px 22px; text-align:center; margin-bottom:14px; backdrop-filter:blur(28px); -webkit-backdrop-filter:blur(28px); }
+.avatar { width:68px; height:68px; border-radius:50%; background:linear-gradient(135deg,var(--blue2),var(--accent)); display:flex; align-items:center; justify-content:center; margin:0 auto 12px; box-shadow:0 0 0 3px rgba(45,122,255,0.28),0 8px 22px rgba(45,122,255,0.28); font-size:26px; font-weight:900; color:#fff; }
+.profile-name { font-size:19px; font-weight:900; margin-bottom:4px; }
+.profile-uid  { font-size:11.5px; color:var(--muted); font-weight:700; letter-spacing:.04em; }
+.stats-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:9px; margin-bottom:14px; }
+.stat-card { background:rgba(7,16,42,0.38); border:1px solid rgba(45,122,255,0.12); border-radius:22px; padding:14px 8px; text-align:center; backdrop-filter:blur(28px); -webkit-backdrop-filter:blur(28px); }
+.stat-val   { font-size:17px; font-weight:900; color:var(--soft); margin-bottom:3px; }
+.stat-label { font-size:9.5px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; }
+.profile-actions { display:flex; flex-direction:column; gap:9px; }
+.profile-row { background:rgba(7,16,42,0.38); border:1px solid rgba(45,122,255,0.12); border-radius:20px; padding:15px 16px; display:flex; align-items:center; gap:13px; cursor:pointer; backdrop-filter:blur(28px); -webkit-backdrop-filter:blur(28px); transition:border-color .2s; }
+.profile-row:active { opacity:.8; }
+.profile-row svg { color:var(--accent); opacity:.8; flex-shrink:0; }
+.profile-row-label { flex:1; font-size:13.5px; font-weight:700; }
+.profile-row-arrow { color:var(--muted); }
+
+/* ═══ NAV ═══ */
+.nav-wrap { position:fixed; bottom:0; left:0; right:0; z-index:100; padding:0 14px; padding-bottom:max(14px,env(safe-area-inset-bottom)); display:flex; justify-content:center; }
+.nav {
+  width:100%; max-width:430px;
+  background:rgba(4,9,26,0.45);
+  backdrop-filter:blur(48px) saturate(2) brightness(1.1);
+  -webkit-backdrop-filter:blur(48px) saturate(2) brightness(1.1);
+  border:1px solid rgba(255,255,255,0.07); border-radius:999px;
+  padding:6px; display:flex; align-items:center; position:relative;
+  box-shadow:0 8px 48px rgba(0,0,0,0.55),0 0 0 1px rgba(255,255,255,0.04),inset 0 1px 0 rgba(255,255,255,0.08);
+  margin-bottom:8px;
+}
+.nav-slider {
+  position:absolute; top:6px; bottom:6px; border-radius:999px;
+  background:rgba(45,122,255,0.22); border:1px solid rgba(45,122,255,0.35);
+  box-shadow:0 0 22px rgba(45,122,255,0.2),inset 0 1px 0 rgba(255,255,255,0.1);
+  will-change:left,width; pointer-events:none;
+}
+.nav-slider.animated { transition:left .38s cubic-bezier(.4,0,.2,1),width .38s cubic-bezier(.4,0,.2,1); }
+.nav-btn {
+  position:relative; z-index:1; flex:1;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;
+  padding:10px 4px; border:none; background:transparent; cursor:pointer; border-radius:999px;
+  font-family:'Nunito',sans-serif; font-size:10px; font-weight:800; color:var(--muted);
+  letter-spacing:.04em; transition:color .28s; outline:none; user-select:none;
+}
+.nav-btn svg { transition:transform .3s cubic-bezier(.34,1.56,.64,1),opacity .28s; opacity:.4; }
+.nav-btn.active { color:#fff; }
+.nav-btn.active svg { opacity:1; transform:scale(1.1); }
+
+@keyframes spin { to{transform:rotate(360deg)} }
 </style>
 </head>
 <body>
 <canvas id="bgCanvas"></canvas>
-
 <div class="app">
   <div class="pages">
 
-    <!-- ИГРЫ -->
+    <!-- ═══ ИГРЫ ═══ -->
     <div class="page active" id="page-games">
       <div class="page-header">
         <div class="page-title">Игры</div>
         <div class="balance-pill">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-          <span id="balanceDisplay">1 000</span>
+          <div class="bal-currency" id="curBtn">
+            <span class="bal-currency-symbol" id="curSymbol">$</span>
+            <span class="bal-chevron"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
+            <div class="cur-dropdown" id="curDropdown">
+              <div class="cur-option active" id="optUSD"><span class="cur-option-sym">$</span> Доллар</div>
+              <div class="cur-option" id="optRUB"><span class="cur-option-sym">₽</span> Рубль</div>
+            </div>
+          </div>
+          <div class="bal-value"><span id="balanceDisplay">0,00</span></div>
+          <div class="bal-add" onclick="alert('Скоро!')">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </div>
         </div>
       </div>
-      <div class="games-grid">
-        <div class="game-card featured">
-          <div class="game-icon">
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-          </div>
-          <div>
-            <div class="game-name">Краш</div>
-            <div class="game-desc">Ставь и забирай до краша. Успеешь?</div>
-          </div>
-          <div class="game-badge">Хот</div>
-        </div>
-
-        <div class="game-card">
-          <div class="game-badge">Скоро</div>
-          <div class="game-icon small">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8m-4-4v4"/></svg>
-          </div>
-          <div class="game-name">Слоты</div>
-          <div class="game-desc">Классика жанра</div>
-        </div>
-
-        <div class="game-card">
-          <div class="game-badge">Скоро</div>
-          <div class="game-icon small">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
-          </div>
-          <div class="game-name">Рулетка</div>
-          <div class="game-desc">Чёрное или красное</div>
-        </div>
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:60%;gap:12px;opacity:.35;">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="12" x2="10" y2="12"/><line x1="8" y1="10" x2="8" y2="14"/><circle cx="15.5" cy="11" r=".5" fill="currentColor"/><circle cx="17.5" cy="13" r=".5" fill="currentColor"/><path d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.544-.604-6.584-.685-7.258A4 4 0 0 0 17.32 5z"/></svg>
+        <div style="font-size:14px;font-weight:700;">Игры скоро появятся</div>
       </div>
     </div>
 
-    <!-- БОНУСЫ -->
+    <!-- ═══ БОНУСЫ ═══ -->
     <div class="page" id="page-bonuses">
-      <div class="page-header">
-        <div class="page-title">Бонусы</div>
-      </div>
+      <div class="page-header"><div class="page-title">Бонусы</div></div>
       <div class="bonus-list">
         <div class="bonus-card">
-          <div class="bonus-icon daily">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-          </div>
-          <div class="bonus-info">
-            <div class="bonus-name">Ежедневный бонус</div>
-            <div class="bonus-sub">Заходи каждый день</div>
-          </div>
-          <div class="bonus-amount">+100</div>
+          <div class="bonus-icon daily"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+          <div class="bonus-info"><div class="bonus-name">Ежедневный бонус</div><div class="bonus-sub">Заходи каждый день</div></div>
+          <div class="bonus-amount">+100 $</div>
         </div>
         <div class="bonus-card">
-          <div class="bonus-icon streak">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-          </div>
-          <div class="bonus-info">
-            <div class="bonus-name">Серия входов</div>
-            <div class="bonus-sub">7 дней подряд</div>
-          </div>
-          <div class="bonus-amount">+500</div>
+          <div class="bonus-icon streak"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
+          <div class="bonus-info"><div class="bonus-name">Серия входов</div><div class="bonus-sub">7 дней подряд</div></div>
+          <div class="bonus-amount">+500 $</div>
         </div>
         <div class="bonus-card">
-          <div class="bonus-icon promo">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V22H4V12"/><path d="M22 7H2v5h20V7z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
-          </div>
-          <div class="bonus-info">
-            <div class="bonus-name">Промокод</div>
-            <div class="bonus-sub">Введи код друга</div>
-          </div>
-          <div class="bonus-amount">+250</div>
+          <div class="bonus-icon promo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V22H4V12"/><path d="M22 7H2v5h20V7z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg></div>
+          <div class="bonus-info"><div class="bonus-name">Промокод</div><div class="bonus-sub">Введи код друга</div></div>
+          <div class="bonus-amount">+250 $</div>
         </div>
       </div>
     </div>
 
-    <!-- КОШЕЛЁК -->
+    <!-- ═══ КОШЕЛЁК ═══ -->
     <div class="page" id="page-wallet">
-      <div class="page-header">
-        <div class="page-title">Кошелёк</div>
+      <div class="page-header"><div class="page-title">Кошелёк</div></div>
+      <div class="cur-toggle-wrap">
+        <button class="cur-toggle active" id="togUSD" onclick="switchWallet('USD')"><span class="cur-sym">$</span> Доллар</button>
+        <button class="cur-toggle" id="togRUB" onclick="switchWallet('RUB')"><span class="cur-sym">₽</span> Рубль</button>
       </div>
-      <div class="wallet-balance">
-        <div class="wallet-label">Баланс</div>
-        <div class="wallet-amount" id="walletAmount">1 000</div>
-        <div class="wallet-sub">виртуальные монеты</div>
+      <div class="wallet-balance" id="walletUSD">
+        <div class="wallet-label">Баланс в долларах</div>
+        <div class="wallet-amount"><span id="walletAmountUSD">0,00</span> <span style="font-size:18px;opacity:.45">$</span></div>
+        <div class="wallet-sub">виртуальная валюта · для игр в $</div>
+      </div>
+      <div class="wallet-balance" id="walletRUB" style="display:none">
+        <div class="wallet-label">Баланс в рублях</div>
+        <div class="wallet-amount"><span id="walletAmountRUB">0,00</span> <span style="font-size:18px;opacity:.45">₽</span></div>
+        <div class="wallet-sub">виртуальная валюта · для игр в ₽</div>
       </div>
       <div class="wallet-actions">
-        <button class="wallet-btn primary">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <button class="wallet-btn primary" onclick="alert('Скоро!')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Пополнить
         </button>
-        <button class="wallet-btn secondary">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+        <button class="wallet-btn secondary" onclick="alert('Скоро!')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
           История
         </button>
       </div>
@@ -499,58 +479,149 @@ html, body {
         <div class="tx-item">
           <div class="tx-dot bonus"></div>
           <div class="tx-info"><div class="tx-name">Стартовый бонус</div><div class="tx-time">Сегодня</div></div>
-          <div class="tx-val bonus">+1 000</div>
+          <div class="tx-val bonus">+1 000,00 $</div>
         </div>
       </div>
     </div>
 
-    <!-- ПРОФИЛЬ -->
+    <!-- ═══ ПРОФИЛЬ ═══ -->
     <div class="page" id="page-profile">
       <div class="page-header">
         <div class="page-title">Профиль</div>
+        <button class="gear-btn" onclick="openSettings()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </button>
       </div>
+
+      <!-- Карточка профиля -->
       <div class="profile-card">
         <div class="avatar" id="avatarEl">?</div>
         <div class="profile-name" id="profileName">Игрок</div>
         <div class="profile-uid" id="profileDate">в казино с —</div>
       </div>
+
+      <!-- Статы -->
       <div class="stats-grid">
-        <div class="stat-card"><div class="stat-val">0</div><div class="stat-label">Игр</div></div>
-        <div class="stat-card"><div class="stat-val">0</div><div class="stat-label">Побед</div></div>
-        <div class="stat-card"><div class="stat-val">0%</div><div class="stat-label">Винрейт</div></div>
+        <div class="stat-card"><div class="stat-val" id="statGames">0</div><div class="stat-label">Игр</div></div>
+        <div class="stat-card"><div class="stat-val" id="statWins">0</div><div class="stat-label">Побед</div></div>
+        <div class="stat-card"><div class="stat-val" id="statWR">0%</div><div class="stat-label">Винрейт</div></div>
+      </div>
+
+      <!-- История игр -->
+      <div class="profile-section-title">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        История игр
+      </div>
+      <div class="history-list" id="historyList">
+        <div class="history-empty">Игр пока нет</div>
+      </div>
+
+      <!-- Действия -->
+      <div class="profile-section-title" style="margin-top:18px">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Настройки
       </div>
       <div class="profile-actions">
+        <div class="profile-row" onclick="openChangeUsername()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <div class="profile-row-label">Изменить никнейм</div>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+        <div class="profile-row" onclick="openChangePassword()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <div class="profile-row-label">Изменить пароль</div>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+        <div class="profile-row" id="adminPanelRow" style="display:none" onclick="location.href='admin.html'">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <div class="profile-row-label" style="color:#a78bfa">Панель управления</div>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(167,139,250,0.4)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
         <div class="profile-row" onclick="doLogout()">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" class="logout-row"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
           <div class="profile-row-label" style="color:#f87171">Выйти</div>
-          <svg class="profile-row-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(248,113,113,0.4)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
         </div>
       </div>
     </div>
 
-  </div><!-- /pages -->
+    <!-- МОДАЛКИ -->
+    <div class="modal-overlay" id="modalOverlay" onclick="closeModal()"></div>
 
-  <!-- BOTTOM NAV -->
+    <!-- Смена никнейма -->
+    <div class="modal" id="modalUsername">
+      <div class="modal-header">
+        <div class="modal-title">Изменить никнейм</div>
+        <button class="modal-close" onclick="closeModal()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      </div>
+      <div class="modal-field">
+        <div class="modal-label">Новый никнейм</div>
+        <input class="modal-input" id="newUsernameInput" type="text" placeholder="минимум 3 символа" maxlength="20">
+      </div>
+      <div class="modal-msg" id="usernameMsg"></div>
+      <button class="modal-btn" onclick="doChangeUsername()">Сохранить</button>
+    </div>
+
+    <!-- Смена пароля -->
+    <div class="modal" id="modalPassword">
+      <div class="modal-header">
+        <div class="modal-title">Изменить пароль</div>
+        <button class="modal-close" onclick="closeModal()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      </div>
+      <div class="modal-field">
+        <div class="modal-label">Текущий пароль</div>
+        <input class="modal-input" id="currentPasswordInput" type="password" placeholder="••••••••">
+      </div>
+      <div class="modal-field">
+        <div class="modal-label">Новый пароль</div>
+        <input class="modal-input" id="newPasswordInput" type="password" placeholder="минимум 6 символов">
+      </div>
+      <div class="modal-msg" id="passwordMsg"></div>
+      <button class="modal-btn" onclick="doChangePassword()">Сохранить</button>
+    </div>
+
+  </div>
+
+  <!-- BAN OVERLAY -->
+  <div id="banOverlay" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.92);backdrop-filter:blur(16px);align-items:center;justify-content:center;padding:24px;">
+    <div style="background:rgba(127,29,29,0.45);border:1px solid rgba(220,38,38,0.4);border-radius:28px;padding:32px 24px;text-align:center;max-width:340px;width:100%;box-shadow:0 0 60px rgba(220,38,38,0.2);">
+      <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:16px"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+      <div style="font-size:22px;font-weight:900;color:#f87171;margin-bottom:8px">Аккаунт заблокирован</div>
+      <div style="font-size:13px;color:rgba(248,113,113,0.75);font-weight:600;line-height:1.6">Вы нарушили правила казино.</div>
+      <div style="font-size:12px;color:rgba(255,255,255,0.35);font-weight:600;margin-top:10px" id="banExpiry"></div>
+      <button onclick="doLogout()" style="margin-top:20px;padding:11px 24px;background:rgba(220,38,38,0.2);border:1px solid rgba(220,38,38,0.3);border-radius:999px;color:#f87171;font-family:'Nunito',sans-serif;font-size:13px;font-weight:900;cursor:pointer;outline:none;">Выйти</button>
+    </div>
+  </div>
+
+  <!-- WARNING OVERLAY -->
+  <div id="warnOverlay" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,0.75);backdrop-filter:blur(10px);align-items:center;justify-content:center;padding:24px;">
+    <div style="background:rgba(120,53,15,0.5);border:1px solid rgba(245,158,11,0.4);border-radius:28px;padding:28px 22px;text-align:center;max-width:340px;width:100%;box-shadow:0 0 50px rgba(245,158,11,0.15);animation:warnIn .5s cubic-bezier(.34,1.56,.64,1)">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:14px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <div style="font-size:18px;font-weight:900;color:#fbbf24;margin-bottom:10px">Предупреждение</div>
+      <div style="font-size:13px;color:rgba(251,191,36,0.85);font-weight:600;line-height:1.6" id="warnMsgText">—</div>
+      <div style="font-size:10px;color:rgba(255,255,255,0.3);font-weight:600;margin-top:6px">от администрации 67Casino</div>
+      <button onclick="closeWarning()" style="margin-top:18px;padding:11px 24px;background:linear-gradient(135deg,#78350f,#f59e0b);border:none;border-radius:999px;color:#fff;font-family:'Nunito',sans-serif;font-size:13px;font-weight:900;cursor:pointer;outline:none;">Понял</button>
+    </div>
+  </div>
+  <style>@keyframes warnIn{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}</style>
+
+  <!-- NAV -->
   <nav class="nav-wrap">
     <div class="nav" id="navBar">
       <div class="nav-slider" id="navSlider"></div>
-
-      <button class="nav-btn active" data-page="games" onclick="switchPage('games', this)">
+      <button class="nav-btn active" onclick="switchPage('games',this)">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="12" x2="10" y2="12"/><line x1="8" y1="10" x2="8" y2="14"/><circle cx="15.5" cy="11" r=".5" fill="currentColor"/><circle cx="17.5" cy="13" r=".5" fill="currentColor"/><path d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.544-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0 0 17.32 5z"/></svg>
         Игры
       </button>
-
-      <button class="nav-btn" data-page="bonuses" onclick="switchPage('bonuses', this)">
+      <button class="nav-btn" onclick="switchPage('bonuses',this)">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V22H4V12"/><path d="M22 7H2v5h20V7z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
         Бонусы
       </button>
-
-      <button class="nav-btn" data-page="wallet" onclick="switchPage('wallet', this)">
+      <button class="nav-btn" onclick="switchPage('wallet',this)">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V8H6a2 2 0 0 1 0-4h14v4"/><path d="M4 6v12c0 1.1.9 2 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg>
         Кошелёк
       </button>
-
-      <button class="nav-btn" data-page="profile" onclick="switchPage('profile', this)">
+      <button class="nav-btn" onclick="switchPage('profile',this)">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         Профиль
       </button>
@@ -563,10 +634,9 @@ html, body {
 (function(){
   const cv=document.getElementById('bgCanvas'),ctx=cv.getContext('2d');
   let W,H,mouse={x:-9999,y:-9999};
-  const isMobile=/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)||innerWidth<768;
-  const N=isMobile?50:100,CONN=isMobile?90:120,ATT=130;
-  const COLS=['#2d7aff','#5599ff','#1358b8','#90bbff','#0d47a1'];
-  const ps=[];
+  const mob=/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)||innerWidth<768;
+  const N=mob?50:100,CONN=mob?90:120,ATT=130;
+  const COLS=['#2d7aff','#5599ff','#1358b8','#90bbff','#0d47a1'],ps=[];
   function resize(){W=cv.width=innerWidth;H=cv.height=innerHeight;}
   addEventListener('resize',resize);resize();
   addEventListener('mousemove',e=>{mouse.x=e.clientX;mouse.y=e.clientY;});
@@ -574,151 +644,258 @@ html, body {
   addEventListener('touchend',()=>{mouse.x=-9999;mouse.y=-9999;},{passive:true});
   class P{
     constructor(){this.init(true);}
-    init(r){this.x=Math.random()*W;this.y=r?Math.random()*H:(Math.random()>.5?-10:H+10);this.vx=(Math.random()-.5)*.35;this.vy=(Math.random()-.5)*.35;this.r=Math.random()*1.8+.4;this.col=COLS[Math.floor(Math.random()*COLS.length)];this.a=Math.random()*.5+.15;this.da=(Math.random()*.002+.001)*(Math.random()>.5?1:-1);this.glow=!isMobile&&Math.random()>.85;this.gp=Math.random()*Math.PI*2;}
+    init(r){this.x=Math.random()*W;this.y=r?Math.random()*H:(Math.random()>.5?-10:H+10);this.vx=(Math.random()-.5)*.35;this.vy=(Math.random()-.5)*.35;this.r=Math.random()*1.8+.4;this.col=COLS[Math.floor(Math.random()*COLS.length)];this.a=Math.random()*.5+.15;this.da=(Math.random()*.002+.001)*(Math.random()>.5?1:-1);this.glow=!mob&&Math.random()>.85;this.gp=Math.random()*Math.PI*2;}
     update(){const dx=mouse.x-this.x,dy=mouse.y-this.y,d=Math.hypot(dx,dy);if(d<ATT&&d>1){const f=(ATT-d)/ATT*.011;this.vx+=dx/d*f;this.vy+=dy/d*f;}this.vx*=.993;this.vy*=.993;this.x+=this.vx;this.y+=this.vy;this.a+=this.da;if(this.a<.06||this.a>.82)this.da*=-1;this.gp+=.04;if(this.x<-20)this.x=W+20;if(this.x>W+20)this.x=-20;if(this.y<-20)this.y=H+20;if(this.y>H+20)this.y=-20;}
     draw(){ctx.save();ctx.globalAlpha=this.a;if(this.glow){const g=ctx.createRadialGradient(this.x,this.y,0,this.x,this.y,this.r*5+Math.sin(this.gp)*2);g.addColorStop(0,this.col);g.addColorStop(1,'transparent');ctx.fillStyle=g;ctx.beginPath();ctx.arc(this.x,this.y,this.r*5+Math.sin(this.gp)*2,0,Math.PI*2);ctx.fill();}ctx.fillStyle=this.col;ctx.shadowColor=this.col;ctx.shadowBlur=this.glow?8:3;ctx.beginPath();ctx.arc(this.x,this.y,this.r,0,Math.PI*2);ctx.fill();ctx.restore();}
   }
   for(let i=0;i<N;i++)ps.push(new P());
-  function lines(){for(let i=0;i<ps.length;i++)for(let j=i+1;j<ps.length;j++){const a=ps[i],b=ps[j],d=Math.hypot(a.x-b.x,a.y-b.y);if(d<CONN){ctx.save();ctx.globalAlpha=(1-d/CONN)*.25;ctx.strokeStyle='#2d7aff';ctx.lineWidth=.55;if(!isMobile){ctx.shadowColor='#2d7aff';ctx.shadowBlur=2;}ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore();}}}
+  function lines(){for(let i=0;i<ps.length;i++)for(let j=i+1;j<ps.length;j++){const a=ps[i],b=ps[j],d=Math.hypot(a.x-b.x,a.y-b.y);if(d<CONN){ctx.save();ctx.globalAlpha=(1-d/CONN)*.25;ctx.strokeStyle='#2d7aff';ctx.lineWidth=.55;if(!mob){ctx.shadowColor='#2d7aff';ctx.shadowBlur=2;}ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore();}}}
   function loop(){ctx.clearRect(0,0,W,H);const g=ctx.createRadialGradient(W*.5,H*.5,0,W*.5,H*.5,Math.max(W,H)*.8);g.addColorStop(0,'#060f24');g.addColorStop(.6,'#040b1a');g.addColorStop(1,'#020609');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);lines();ps.forEach(p=>{p.update();p.draw();});requestAnimationFrame(loop);}
   loop();
 })();
 </script>
 
-<!-- FIREBASE + NAV LOGIC -->
+<!-- FIREBASE -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getAuth, onAuthStateChanged, signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, doc, getDoc, updateDoc, collection, query, where, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyBnPmUMDLSS1pjFzE0aU46BB2h0sxkmUCg",
-  authDomain: "casino-89385.firebaseapp.com",
-  databaseURL: "https://casino-89385-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "casino-89385",
-  storageBucket: "casino-89385.firebasestorage.app",
-  messagingSenderId: "315653962787",
-  appId: "1:315653962787:web:d2df833858d76ff9638596"
-};
-
-const app  = initializeApp(firebaseConfig);
+const app  = initializeApp({ apiKey:"AIzaSyBnPmUMDLSS1pjFzE0aU46BB2h0sxkmUCg",authDomain:"casino-89385.firebaseapp.com",projectId:"casino-89385",storageBucket:"casino-89385.firebasestorage.app",messagingSenderId:"315653962787",appId:"1:315653962787:web:d2df833858d76ff9638596" });
 const auth = getAuth(app);
 const db   = getFirestore(app);
 
-function fillUI(name, createdAt, balance) {
-  const bal = Number(balance || 0).toLocaleString('ru');
-  const letter = (name || '?')[0].toUpperCase();
-
-  document.getElementById('profileName').textContent    = name || 'Игрок';
-  document.getElementById('avatarEl').textContent       = letter;
-  document.getElementById('balanceDisplay').textContent = bal;
-  document.getElementById('walletAmount').textContent   = bal;
-
-  // Дата регистрации
-  const dateEl = document.getElementById('profileDate');
-  if (createdAt) {
-    const d = new Date(createdAt);
-    const months = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
-    dateEl.textContent = `в казино с ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
-  } else {
-    // Если Firestore недоступен — берём дату создания из Firebase Auth
-    const d = new Date();
-    const months = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
-    dateEl.textContent = `в казино с ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
-  }
-}
+let currentUser = null;
+let userDocRef  = null;
 
 onAuthStateChanged(auth, async user => {
-  if (!user) { location.href = 'index.html'; return; }
+  if (!user){ location.href='index.html'; return; }
+  currentUser = user;
+  userDocRef  = doc(db,'users',user.uid);
 
   const authName = user.displayName || user.email?.split('@')[0] || 'Игрок';
-  // Показываем сразу с текущей датой как заглушка
-  fillUI(authName, null, 1000);
+  fillUI(authName, null, 0, 0);
 
   try {
-    const snap = await getDoc(doc(db, 'users', user.uid));
-    if (snap.exists()) {
+    const snap = await getDoc(userDocRef);
+    if (snap.exists()){
       const d = snap.data();
-      fillUI(d.username || authName, d.createdAt, d.balance);
+
+      // Проверка бана
+      if (d.banned){
+        const until = d.bannedUntil ? new Date(d.bannedUntil) : null;
+        if (!until || until > new Date()){
+          const banEl = document.getElementById('banOverlay');
+          banEl.style.display = 'flex';
+          document.getElementById('banExpiry').textContent = until
+            ? `Блокировка до: ${until.toLocaleDateString('ru',{day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'})}`
+            : 'Блокировка: навсегда';
+          return;
+        } else {
+          await updateDoc(userDocRef, { banned:false, bannedUntil:null });
+        }
+      }
+
+      fillUI(d.username||authName, d.createdAt, d.balance||0, d.balanceRUB||0);
+      loadHistory(user.uid);
+
+      // Показать кнопку админки
+      if (d.role==='admin'||d.role==='owner'){
+        const row = document.getElementById('adminPanelRow');
+        if (row) row.style.display='flex';
+      }
+
+      // Проверить уведомления
+      checkNotifications(user.uid);
     }
-  } catch(e) {
-    console.error('Firestore error:', e.code, e.message);
-  }
+  } catch(e){ console.error(e); }
 });
 
-window.doLogout = async () => {
-  await signOut(auth);
-  location.href = 'index.html';
+async function checkNotifications(uid){
+  try {
+    const q = query(collection(db,'notifications'), where('uid','==',uid), where('read','==',false), limit(5));
+    const snap = await getDocs(q);
+    for (const d of snap.docs){
+      const data = d.data();
+      if (data.type === 'warning'){
+        document.getElementById('warnMsgText').textContent = data.text || 'Нарушение правил казино.';
+        document.getElementById('warnOverlay').style.display = 'flex';
+      }
+      await updateDoc(doc(db,'notifications',d.id), { read:true });
+    }
+  } catch(e){ /* ok */ }
+}
+
+window.closeWarning = () => { document.getElementById('warnOverlay').style.display='none'; };
+
+async function loadHistory(uid) {
+  try {
+    const q = query(collection(db,'gameHistory'), where('uid','==',uid), orderBy('createdAt','desc'), limit(10));
+    const snap = await getDocs(q);
+    const list = document.getElementById('historyList');
+    if (snap.empty){ list.innerHTML='<div class="history-empty">Игр пока нет</div>'; return; }
+    list.innerHTML = '';
+    snap.forEach(d => {
+      const data = d.data();
+      const won  = data.result > 0;
+      const date = new Date(data.createdAt).toLocaleDateString('ru',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+      list.innerHTML += `
+        <div class="history-item">
+          <div class="hi-icon ${won?'win':'loss'}">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${won?'#4ade80':'#f87171'}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${won?'<polyline points="20 6 9 17 4 12"/>':'<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>'}</svg>
+          </div>
+          <div class="hi-info">
+            <div class="hi-game">${data.game||'Краш'}</div>
+            <div class="hi-time">${date}</div>
+          </div>
+          <div class="hi-result ${won?'win':'loss'}">${won?'+':''}${fmt(data.result)} ${data.currency||'$'}</div>
+        </div>`;
+    });
+  } catch(e){ /* history collection not yet created */ }
+}
+
+window._auth = auth;
+window._db   = db;
+
+window.doLogout = async () => { await signOut(auth); location.href='index.html'; };
+
+window.doChangeUsername = async () => {
+  const newName = document.getElementById('newUsernameInput').value.trim();
+  const msg = document.getElementById('usernameMsg');
+  msg.className = 'modal-msg';
+  if (!newName || newName.length < 3){ msg.textContent='Никнейм минимум 3 символа'; msg.className='modal-msg error'; return; }
+  const btn = document.querySelector('#modalUsername .modal-btn');
+  btn.disabled = true; btn.textContent = 'Сохраняем...';
+  try {
+    await updateDoc(userDocRef, { username: newName });
+    await currentUser.reload();
+    document.getElementById('profileName').textContent = newName;
+    document.getElementById('avatarEl').textContent    = newName[0].toUpperCase();
+    msg.textContent = 'Никнейм изменён!'; msg.className = 'modal-msg success';
+    setTimeout(closeModal, 1200);
+  } catch(e){
+    msg.textContent = 'Ошибка: ' + e.message; msg.className = 'modal-msg error';
+  }
+  btn.disabled = false; btn.textContent = 'Сохранить';
+};
+
+window.doChangePassword = async () => {
+  const current = document.getElementById('currentPasswordInput').value;
+  const newPass = document.getElementById('newPasswordInput').value;
+  const msg = document.getElementById('passwordMsg');
+  msg.className = 'modal-msg';
+  if (!current || !newPass){ msg.textContent='Заполни все поля'; msg.className='modal-msg error'; return; }
+  if (newPass.length < 6){ msg.textContent='Новый пароль минимум 6 символов'; msg.className='modal-msg error'; return; }
+  const btn = document.querySelector('#modalPassword .modal-btn');
+  btn.disabled = true; btn.textContent = 'Сохраняем...';
+  try {
+    const cred = EmailAuthProvider.credential(currentUser.email, current);
+    await reauthenticateWithCredential(currentUser, cred);
+    await updatePassword(currentUser, newPass);
+    msg.textContent = 'Пароль изменён!'; msg.className = 'modal-msg success';
+    setTimeout(closeModal, 1200);
+  } catch(e){
+    let m = 'Ошибка';
+    if (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') m = 'Неверный текущий пароль';
+    msg.textContent = m; msg.className = 'modal-msg error';
+  }
+  btn.disabled = false; btn.textContent = 'Сохранить';
 };
 </script>
 
-<!-- NAV SLIDER LOGIC -->
+<!-- LOGIC -->
 <script>
-let currentPage = 'games';
-let prevIndex = 0;
+// MODALS
+function openModal(id) {
+  document.getElementById('modalOverlay').classList.add('open');
+  document.getElementById(id).classList.add('open');
+}
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+  document.querySelectorAll('.modal').forEach(m => m.classList.remove('open'));
+  // clear inputs and msgs
+  document.querySelectorAll('.modal-input').forEach(i => i.value='');
+  document.querySelectorAll('.modal-msg').forEach(m => { m.className='modal-msg'; m.textContent=''; });
+  document.querySelectorAll('.modal-btn').forEach(b => { b.disabled=false; });
+}
+window.openSettings        = () => alert('Настройки — скоро!');
+window.openChangeUsername  = () => openModal('modalUsername');
+window.openChangePassword  = () => openModal('modalPassword');
+window.closeModal          = closeModal;
 
-function positionSlider(btn, animate){
-  const slider = document.getElementById('navSlider');
-  if (animate) slider.classList.add('animated');
-  slider.style.left  = btn.offsetLeft + 'px';
-  slider.style.width = btn.offsetWidth + 'px';
+let currentPage='games', prevIndex=0;
+let activeCur='USD', balances={USD:0,RUB:0};
+
+function fmt(n){ return Number(n).toLocaleString('ru',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+function updateBal(){
+  document.getElementById('curSymbol').textContent   = activeCur==='USD'?'$':'₽';
+  document.getElementById('balanceDisplay').textContent = fmt(balances[activeCur]);
+}
+function switchWallet(cur){
+  activeCur=cur;
+  document.getElementById('walletUSD').style.display=cur==='USD'?'':'none';
+  document.getElementById('walletRUB').style.display=cur==='RUB'?'':'none';
+  document.getElementById('togUSD').classList.toggle('active',cur==='USD');
+  document.getElementById('togRUB').classList.toggle('active',cur==='RUB');
+  updateBal();
+}
+function fillUI(name,createdAt,balUSD,balRUB){
+  balances.USD=balUSD||0; balances.RUB=balRUB||0;
+  document.getElementById('profileName').textContent=name||'Игрок';
+  document.getElementById('avatarEl').textContent=(name||'?')[0].toUpperCase();
+  document.getElementById('walletAmountUSD').textContent=fmt(balances.USD);
+  document.getElementById('walletAmountRUB').textContent=fmt(balances.RUB);
+  updateBal();
+  const d=createdAt?new Date(createdAt):new Date();
+  const m=['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
+  document.getElementById('profileDate').textContent=`в казино с ${d.getDate()} ${m[d.getMonth()]} ${d.getFullYear()}`;
 }
 
-function switchPage(pageId, btn){
-  if (pageId === currentPage) return;
-
-  const btns     = document.querySelectorAll('.nav-btn');
-  const newIndex = Array.from(btns).indexOf(btn);
-  const goingRight = newIndex > prevIndex;
-
-  // Exit current page
-  const oldPage = document.getElementById('page-' + currentPage);
-  oldPage.classList.remove('active');
-  oldPage.classList.add(goingRight ? 'exit-left' : 'exit-right');
-  setTimeout(() => oldPage.classList.remove('exit-left','exit-right'), 380);
-
-  // Enter new page (start from the correct side)
-  const newPage = document.getElementById('page-' + pageId);
-  newPage.style.transition = 'none';
-  newPage.style.transform  = goingRight ? 'translateX(36px)' : 'translateX(-36px)';
-  newPage.style.opacity    = '0';
-
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      newPage.style.transition = '';
-      newPage.style.transform  = '';
-      newPage.style.opacity    = '';
-      newPage.classList.add('active');
-    });
+// Currency dropdown
+document.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('curBtn').addEventListener('click',e=>{
+    e.stopPropagation();
+    const dd=document.getElementById('curDropdown');
+    const btn=document.getElementById('curBtn');
+    const open=dd.classList.contains('open');
+    dd.classList.toggle('open',!open);
+    btn.classList.toggle('open',!open);
   });
+  document.getElementById('optUSD').addEventListener('click',e=>{ e.stopPropagation(); activeCur='USD'; document.getElementById('optUSD').classList.add('active'); document.getElementById('optRUB').classList.remove('active'); document.getElementById('curDropdown').classList.remove('open'); document.getElementById('curBtn').classList.remove('open'); updateBal(); switchWallet('USD'); });
+  document.getElementById('optRUB').addEventListener('click',e=>{ e.stopPropagation(); activeCur='RUB'; document.getElementById('optRUB').classList.add('active'); document.getElementById('optUSD').classList.remove('active'); document.getElementById('curDropdown').classList.remove('open'); document.getElementById('curBtn').classList.remove('open'); updateBal(); switchWallet('RUB'); });
+  document.addEventListener('click',()=>{ document.getElementById('curDropdown').classList.remove('open'); document.getElementById('curBtn').classList.remove('open'); });
+});
 
-  // Tabs
-  btns.forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-
-  // Slider — animate AFTER layout so offsetLeft is correct
-  requestAnimationFrame(() => positionSlider(btn, true));
-
-  prevIndex   = newIndex;
-  currentPage = pageId;
+// NAV
+function positionSlider(btn,animate){
+  const s=document.getElementById('navSlider');
+  if(animate) s.classList.add('animated');
+  s.style.left=btn.offsetLeft+'px';
+  s.style.width=btn.offsetWidth+'px';
 }
-
-// Init: position without animation, then enable animation after 1 frame
-window.addEventListener('DOMContentLoaded', () => {
-  const active = document.querySelector('.nav-btn.active');
-  if (active){
-    positionSlider(active, false);
-    // Enable animation after first paint
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      document.getElementById('navSlider').classList.add('animated');
-    }));
-  }
+function switchPage(pageId,btn){
+  if(pageId===currentPage) return;
+  const btns=document.querySelectorAll('.nav-btn');
+  const newIndex=Array.from(btns).indexOf(btn);
+  const right=newIndex>prevIndex;
+  const old=document.getElementById('page-'+currentPage);
+  old.classList.remove('active');
+  const nw=document.getElementById('page-'+pageId);
+  nw.style.transition='none';
+  nw.style.transform=right?'translateX(60px)':'translateX(-60px)';
+  nw.classList.add('active');
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{ nw.style.transition=''; nw.style.transform=''; }));
+  btns.forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  requestAnimationFrame(()=>positionSlider(btn,true));
+  prevIndex=newIndex; currentPage=pageId;
+}
+document.addEventListener('DOMContentLoaded',()=>{
+  const a=document.querySelector('.nav-btn.active');
+  if(a){ positionSlider(a,false); requestAnimationFrame(()=>requestAnimationFrame(()=>document.getElementById('navSlider').classList.add('animated'))); }
 });
-
-window.addEventListener('resize', () => {
-  const active = document.querySelector('.nav-btn.active');
-  if (active) positionSlider(active, false);
-});
+addEventListener('resize',()=>{ const a=document.querySelector('.nav-btn.active'); if(a) positionSlider(a,false); });
 </script>
 </body>
 </html>

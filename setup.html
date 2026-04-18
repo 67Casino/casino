@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>67Casino — Установка прав</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --bg:#030912; --blue2:#1358b8; --accent:#2d7aff;
+  --soft:#90bbff; --text:#e6f0ff; --muted:#4e6f9e;
+}
+html,body { min-height:100vh; background:var(--bg); font-family:'Nunito',sans-serif; color:var(--text); display:flex; align-items:center; justify-content:center; padding:20px; }
+#bgCanvas { position:fixed; inset:0; z-index:0; }
+.wrap { position:relative; z-index:1; width:100%; max-width:400px; }
+
+.logo { text-align:center; margin-bottom:28px; }
+.logo-num { font-size:44px; font-weight:900; letter-spacing:-2px; background:linear-gradient(135deg,#b8d8ff,#5599ff,#2d7aff,#8ec8ff); background-size:200% 200%; -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; animation:sh 4s ease-in-out infinite; filter:drop-shadow(0 0 8px rgba(45,122,255,.35)); }
+@keyframes sh { 0%,100%{background-position:0 50%} 50%{background-position:100% 50%} }
+.logo-sub { font-size:11px; font-weight:800; letter-spacing:.2em; text-transform:uppercase; color:var(--muted); margin-top:2px; }
+
+.card { background:rgba(7,16,42,0.55); border:1px solid rgba(45,122,255,0.2); border-radius:28px; padding:28px 24px; backdrop-filter:blur(40px); -webkit-backdrop-filter:blur(40px); box-shadow:0 40px 80px rgba(0,0,0,0.6),inset 0 1px 0 rgba(255,255,255,0.07); }
+.card-title { font-size:17px; font-weight:900; margin-bottom:6px; }
+.card-sub   { font-size:12px; color:var(--muted); font-weight:600; margin-bottom:20px; line-height:1.5; }
+
+.step { display:none; }
+.step.active { display:block; }
+
+.label { font-size:10.5px; font-weight:800; color:var(--muted); letter-spacing:.08em; text-transform:uppercase; margin-bottom:7px; }
+.inp {
+  width:100%; background:rgba(3,9,26,0.7); border:1.5px solid rgba(45,122,255,0.15);
+  border-radius:16px; padding:12px 14px; font-family:'Nunito',sans-serif;
+  font-size:14px; font-weight:600; color:var(--text); outline:none;
+  -webkit-appearance:none; margin-bottom:12px; transition:border-color .2s;
+}
+.inp:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(45,122,255,0.1); }
+.inp::placeholder { color:rgba(78,111,158,.4); }
+.btn {
+  width:100%; padding:13px; border:none; border-radius:16px;
+  background:linear-gradient(135deg,var(--blue2),var(--accent));
+  color:#fff; font-family:'Nunito',sans-serif; font-size:14px; font-weight:900;
+  cursor:pointer; box-shadow:0 4px 20px rgba(45,122,255,.35);
+  transition:transform .18s; outline:none; display:flex; align-items:center; justify-content:center; gap:8px;
+}
+.btn:active { transform:scale(.97); }
+.btn:disabled { opacity:.5; cursor:not-allowed; transform:none; }
+
+.msg { font-size:12px; font-weight:700; padding:9px 12px; border-radius:12px; margin-bottom:10px; display:none; }
+.msg.err { background:rgba(255,60,60,.1); color:#f87171; border:1px solid rgba(255,80,80,.2); display:block; }
+.msg.ok  { background:rgba(45,122,255,.1); color:var(--soft); border:1px solid rgba(45,122,255,.2); display:block; }
+
+/* User result card */
+.user-found { background:rgba(3,9,26,0.6); border:1px solid rgba(45,122,255,0.18); border-radius:16px; padding:14px; display:flex; align-items:center; gap:12px; margin-bottom:14px; }
+.user-av { width:44px; height:44px; border-radius:50%; background:linear-gradient(135deg,var(--blue2),var(--accent)); display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:900; flex-shrink:0; }
+.user-nm { font-size:15px; font-weight:900; }
+.user-dt { font-size:11px; color:var(--muted); font-weight:600; margin-top:2px; }
+
+.role-badge { display:inline-block; font-size:9px; font-weight:900; letter-spacing:.06em; text-transform:uppercase; border-radius:6px; padding:2px 7px; margin-top:4px; }
+.role-owner { background:linear-gradient(135deg,#78350f,#f59e0b); color:#fff; }
+.role-admin { background:rgba(45,122,255,0.2); color:var(--soft); border:1px solid rgba(45,122,255,0.3); }
+
+.spinner { width:16px; height:16px; border:2px solid rgba(255,255,255,.3); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; flex-shrink:0; }
+@keyframes spin { to{transform:rotate(360deg)} }
+</style>
+</head>
+<body>
+<canvas id="bgCanvas"></canvas>
+<div class="wrap">
+  <div class="logo">
+    <div class="logo-num">67</div>
+    <div class="logo-sub">Casino · Setup</div>
+  </div>
+
+  <div class="card">
+
+    <!-- ШАГ 1: Ввод ключа -->
+    <div class="step active" id="step1">
+      <div class="card-title">Введи ключ доступа</div>
+      <div class="card-sub">Для назначения прав владельца или администратора нужен специальный ключ.</div>
+      <div class="msg" id="step1msg"></div>
+      <div class="label">Ключ</div>
+      <input class="inp" id="keyInput" type="text" placeholder="XXXXX-XXXXX-XXXXX-XXXXX">
+      <button class="btn" onclick="checkKey()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        Подтвердить
+      </button>
+    </div>
+
+    <!-- ШАГ 2: Поиск аккаунта -->
+    <div class="step" id="step2">
+      <div class="card-title" id="step2title">Выбери аккаунт</div>
+      <div class="card-sub" id="step2sub">Введи никнейм аккаунта которому хочешь выдать права.</div>
+      <div class="msg" id="step2msg"></div>
+      <div class="label">Никнейм</div>
+      <input class="inp" id="usernameSearch" type="text" placeholder="никнейм...">
+      <button class="btn" onclick="searchUser()" style="margin-bottom:12px">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        Найти
+      </button>
+
+      <div id="userFoundBox" style="display:none">
+        <div class="user-found">
+          <div class="user-av" id="foundAv">?</div>
+          <div>
+            <div class="user-nm" id="foundName">—</div>
+            <div class="user-dt" id="foundDate">—</div>
+            <div id="foundBadge"></div>
+          </div>
+        </div>
+        <div class="label">Пароль от этого аккаунта</div>
+        <input class="inp" id="confirmPassword" type="password" placeholder="••••••••">
+        <button class="btn" id="assignBtn" onclick="assignRole()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          Выдать права
+        </button>
+      </div>
+    </div>
+
+    <!-- ШАГ 3: Успех -->
+    <div class="step" id="step3">
+      <div style="text-align:center;padding:10px 0">
+        <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:14px"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        <div style="font-size:18px;font-weight:900;margin-bottom:6px" id="successTitle">Готово!</div>
+        <div style="font-size:12.5px;color:var(--muted);font-weight:600;line-height:1.5" id="successSub">Права выданы успешно.</div>
+        <a href="index.html" style="display:inline-block;margin-top:20px;padding:11px 24px;background:linear-gradient(135deg,var(--blue2),var(--accent));border-radius:999px;color:#fff;font-size:13px;font-weight:900;text-decoration:none;">Перейти в казино</a>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- PARTICLES -->
+<script>
+(function(){
+  const cv=document.getElementById('bgCanvas'),ctx=cv.getContext('2d');
+  let W,H;
+  const COLS=['#2d7aff','#5599ff','#1358b8'],ps=[];
+  function resize(){W=cv.width=innerWidth;H=cv.height=innerHeight;}
+  addEventListener('resize',resize);resize();
+  class P{constructor(){this.x=Math.random()*W;this.y=Math.random()*H;this.vx=(Math.random()-.5)*.3;this.vy=(Math.random()-.5)*.3;this.r=Math.random()*1.6+.4;this.col=COLS[Math.floor(Math.random()*3)];this.a=Math.random()*.4+.1;this.da=(Math.random()*.002+.001)*(Math.random()>.5?1:-1);}update(){this.x+=this.vx;this.y+=this.vy;this.a+=this.da;if(this.a<.05||this.a>.7)this.da*=-1;if(this.x<-10)this.x=W+10;if(this.x>W+10)this.x=-10;if(this.y<-10)this.y=H+10;if(this.y>H+10)this.y=-10;}draw(){ctx.save();ctx.globalAlpha=this.a;ctx.fillStyle=this.col;ctx.shadowColor=this.col;ctx.shadowBlur=4;ctx.beginPath();ctx.arc(this.x,this.y,this.r,0,Math.PI*2);ctx.fill();ctx.restore();}}
+  for(let i=0;i<60;i++)ps.push(new P());
+  function loop(){ctx.clearRect(0,0,W,H);const g=ctx.createRadialGradient(W*.5,H*.5,0,W*.5,H*.5,Math.max(W,H));g.addColorStop(0,'#060f24');g.addColorStop(1,'#020609');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);ps.forEach(p=>{p.update();p.draw();});requestAnimationFrame(loop);}
+  loop();
+})();
+</script>
+
+<script type="module">
+import { initializeApp }    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, collection, getDocs, doc, getDoc, updateDoc, query, where } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const app = initializeApp({ apiKey:"AIzaSyBnPmUMDLSS1pjFzE0aU46BB2h0sxkmUCg",authDomain:"casino-89385.firebaseapp.com",projectId:"casino-89385",storageBucket:"casino-89385.firebasestorage.app",messagingSenderId:"315653962787",appId:"1:315653962787:web:d2df833858d76ff9638596" });
+const auth = getAuth(app);
+const db   = getFirestore(app);
+
+// Ключи: owner и admin (owner может генерировать admin ключи)
+const OWNER_KEY = '67CSN-OWNER-X9K2M-7VPLQ';
+// Admin ключи хранятся в Firestore: коллекция adminKeys
+
+let currentRole = null; // 'owner' | 'admin'
+let foundUserDoc = null;
+
+function showMsg(id, text, type){ const el=document.getElementById(id); el.textContent=text; el.className='msg '+type; }
+function goStep(n){ document.querySelectorAll('.step').forEach(s=>s.classList.remove('active')); document.getElementById('step'+n).classList.add('active'); }
+
+window.checkKey = async () => {
+  const key = document.getElementById('keyInput').value.trim().toUpperCase();
+  if (!key){ showMsg('step1msg','Введи ключ','err'); return; }
+
+  // Check owner key
+  if (key === OWNER_KEY){
+    currentRole = 'owner';
+    document.getElementById('step2title').textContent = 'Аккаунт владельца';
+    document.getElementById('step2sub').textContent   = 'Введи никнейм своего аккаунта чтобы получить статус Владелец.';
+    document.getElementById('assignBtn').innerHTML    = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> Стать владельцем';
+    goStep(2); return;
+  }
+
+  // Check admin key from Firestore
+  try {
+    const snap = await getDocs(query(collection(db,'adminKeys'), where('key','==',key), where('used','==',false)));
+    if (!snap.empty){
+      currentRole = 'admin';
+      document.getElementById('step2title').textContent = 'Аккаунт администратора';
+      document.getElementById('step2sub').textContent   = 'Введи никнейм своего аккаунта чтобы получить статус Администратор.';
+      document.getElementById('assignBtn').innerHTML    = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> Стать администратором';
+      goStep(2);
+      // Mark key as used
+      await updateDoc(doc(db,'adminKeys',snap.docs[0].id), { used: true });
+    } else {
+      showMsg('step1msg','Неверный или уже использованный ключ','err');
+    }
+  } catch(e){ showMsg('step1msg','Ошибка: '+e.message,'err'); }
+};
+
+window.searchUser = async () => {
+  const name = document.getElementById('usernameSearch').value.trim().toLowerCase();
+  document.getElementById('userFoundBox').style.display = 'none';
+  document.getElementById('step2msg').className = 'msg';
+  if (!name){ showMsg('step2msg','Введи никнейм','err'); return; }
+  try {
+    const snap = await getDocs(query(collection(db,'users'), where('username','==',name)));
+    if (snap.empty){ showMsg('step2msg','Аккаунт не найден','err'); return; }
+    const d = snap.docs[0];
+    foundUserDoc = { id: d.id, ...d.data() };
+    document.getElementById('foundAv').textContent   = foundUserDoc.username[0].toUpperCase();
+    document.getElementById('foundName').textContent = foundUserDoc.username;
+    const date = foundUserDoc.createdAt ? new Date(foundUserDoc.createdAt).toLocaleDateString('ru') : '—';
+    document.getElementById('foundDate').textContent = 'С нами с ' + date;
+    const badge = document.getElementById('foundBadge');
+    if (foundUserDoc.role === 'owner') badge.innerHTML = '<span class="role-badge role-owner">Владелец</span>';
+    else if (foundUserDoc.role === 'admin') badge.innerHTML = '<span class="role-badge role-admin">Администратор</span>';
+    else badge.innerHTML = '';
+    document.getElementById('userFoundBox').style.display = 'block';
+  } catch(e){ showMsg('step2msg','Ошибка: '+e.message,'err'); }
+};
+
+window.assignRole = async () => {
+  if (!foundUserDoc){ return; }
+  const password = document.getElementById('confirmPassword').value;
+  const msg = document.getElementById('step2msg');
+  if (!password){ showMsg('step2msg','Введи пароль от аккаунта','err'); return; }
+  const btn = document.getElementById('assignBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Проверяем...';
+  try {
+    // Authenticate as that user to verify password
+    const fakeEmail = foundUserDoc.username.toLowerCase().replace(/[^a-z0-9_]/g,'') + '@67casino.game';
+    await signInWithEmailAndPassword(auth, fakeEmail, password);
+    // Set role in Firestore
+    await updateDoc(doc(db,'users',foundUserDoc.id), { role: currentRole });
+    await signOut(auth);
+    // Show success
+    document.getElementById('successTitle').textContent = currentRole === 'owner' ? 'Ты — Владелец!' : 'Ты — Администратор!';
+    document.getElementById('successSub').textContent  = `Аккаунт "${foundUserDoc.username}" получил статус ${currentRole === 'owner' ? 'Владелец' : 'Администратор'}. Перейди в казино.`;
+    goStep(3);
+  } catch(e){
+    let m = 'Ошибка';
+    if (e.code==='auth/invalid-credential'||e.code==='auth/wrong-password') m='Неверный пароль';
+    showMsg('step2msg', m, 'err');
+    btn.disabled = false;
+    btn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> Выдать права';
+  }
+};
+</script>
+</body>
+</html>

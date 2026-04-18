@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>67Casino — Админ панель</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --bg:#030912; --blue2:#1358b8; --accent:#2d7aff;
+  --soft:#90bbff; --text:#e6f0ff; --muted:#4e6f9e;
+}
+html,body { min-height:100vh; background:var(--bg); font-family:'Nunito',sans-serif; color:var(--text); }
+#bgCanvas { position:fixed; inset:0; z-index:0; }
+
+/* LAYOUT */
+.shell { position:relative; z-index:1; max-width:480px; margin:0 auto; padding:20px 16px 48px; }
+
+/* ACCESS DENIED */
+#accessDenied { display:none; text-align:center; padding:60px 20px; }
+#accessDenied svg { margin-bottom:16px; opacity:.5; }
+#accessDenied h2 { font-size:20px; font-weight:900; margin-bottom:8px; }
+#accessDenied p  { font-size:13px; color:var(--muted); font-weight:600; }
+
+/* HEADER */
+.adm-header { display:flex; align-items:center; gap:10px; margin-bottom:22px; padding-top:8px; }
+.adm-title { font-size:20px; font-weight:900; flex:1; background:linear-gradient(135deg,#fff,var(--soft)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+.role-chip { font-size:9.5px; font-weight:900; letter-spacing:.06em; text-transform:uppercase; border-radius:8px; padding:3px 10px; }
+.chip-owner { background:linear-gradient(135deg,#78350f,#f59e0b); color:#fff; }
+.chip-admin { background:rgba(45,122,255,0.18); color:var(--soft); border:1px solid rgba(45,122,255,0.3); }
+
+.back-link { display:inline-flex; align-items:center; gap:5px; color:var(--muted); font-size:12.5px; font-weight:700; text-decoration:none; margin-bottom:14px; cursor:pointer; }
+.back-link:hover { color:var(--soft); }
+
+/* CARD */
+.card { background:rgba(7,16,42,0.5); border:1px solid rgba(45,122,255,0.15); border-radius:22px; padding:18px 16px; margin-bottom:12px; backdrop-filter:blur(32px); -webkit-backdrop-filter:blur(32px); }
+.card-title { font-size:12px; font-weight:900; color:var(--muted); letter-spacing:.07em; text-transform:uppercase; margin-bottom:14px; display:flex; align-items:center; gap:6px; }
+.card-title svg { opacity:.7; }
+
+/* STATS */
+.stats-row { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+.stat-b { background:rgba(3,9,26,0.55); border:1px solid rgba(45,122,255,0.1); border-radius:14px; padding:12px 8px; text-align:center; }
+.stat-b-val { font-size:20px; font-weight:900; color:var(--soft); margin-bottom:2px; }
+.stat-b-lbl { font-size:9.5px; color:var(--muted); font-weight:700; text-transform:uppercase; letter-spacing:.05em; }
+
+/* PLAYERS */
+.players-list { display:flex; flex-direction:column; gap:7px; max-height:280px; overflow-y:auto; }
+.player-row { background:rgba(3,9,26,0.55); border:1px solid rgba(45,122,255,0.1); border-radius:14px; padding:11px 13px; display:flex; align-items:center; gap:10px; cursor:pointer; transition:border-color .2s; }
+.player-row:active { border-color:rgba(45,122,255,0.35); }
+.player-row.selected { border-color:var(--accent); background:rgba(45,122,255,0.08); }
+.pl-av { width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg,var(--blue2),var(--accent)); display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:900; flex-shrink:0; }
+.pl-av.banned { background:linear-gradient(135deg,#7f1d1d,#dc2626); }
+.pl-info { flex:1; }
+.pl-name { font-size:13px; font-weight:800; }
+.pl-meta { font-size:10px; color:var(--muted); font-weight:600; margin-top:1px; }
+.pl-role { font-size:8.5px; font-weight:900; letter-spacing:.05em; text-transform:uppercase; border-radius:5px; padding:1px 6px; margin-left:5px; }
+.pl-role.owner { background:linear-gradient(135deg,#78350f,#f59e0b); color:#fff; }
+.pl-role.admin { background:rgba(45,122,255,0.2); color:var(--soft); }
+.pl-bal { font-size:11.5px; font-weight:900; color:var(--soft); }
+.banned-tag { font-size:8.5px; font-weight:900; color:#f87171; background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.2); border-radius:5px; padding:1px 6px; }
+
+/* SELECTED PLAYER ACTIONS */
+.sel-player-box { background:rgba(3,9,26,0.6); border:1px solid rgba(45,122,255,0.18); border-radius:16px; padding:14px; margin-bottom:14px; display:flex; align-items:center; gap:10px; }
+.sel-av { width:42px; height:42px; border-radius:50%; background:linear-gradient(135deg,var(--blue2),var(--accent)); display:flex; align-items:center; justify-content:center; font-size:17px; font-weight:900; flex-shrink:0; }
+.sel-info { flex:1; }
+.sel-name { font-size:15px; font-weight:900; }
+.sel-meta { font-size:11px; color:var(--muted); font-weight:600; }
+
+/* INPUTS */
+.lbl { font-size:10px; font-weight:800; color:var(--muted); letter-spacing:.08em; text-transform:uppercase; margin-bottom:6px; margin-top:10px; }
+.inp { width:100%; background:rgba(3,9,26,0.7); border:1.5px solid rgba(45,122,255,0.14); border-radius:14px; padding:11px 13px; font-family:'Nunito',sans-serif; font-size:13.5px; font-weight:600; color:var(--text); outline:none; -webkit-appearance:none; transition:border-color .2s; }
+.inp:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(45,122,255,.09); }
+.inp::placeholder { color:rgba(78,111,158,.4); }
+select.inp { cursor:pointer; }
+
+/* BUTTONS */
+.actions-row { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
+.act-btn { flex:1; min-width:80px; padding:11px 8px; border:none; border-radius:14px; font-family:'Nunito',sans-serif; font-size:12px; font-weight:900; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:5px; transition:transform .18s; outline:none; }
+.act-btn:active { transform:scale(.95); }
+.act-btn.primary { background:linear-gradient(135deg,var(--blue2),var(--accent)); color:#fff; box-shadow:0 3px 14px rgba(45,122,255,.3); }
+.act-btn.danger  { background:linear-gradient(135deg,#7f1d1d,#dc2626); color:#fff; box-shadow:0 3px 14px rgba(220,38,38,.25); }
+.act-btn.warn    { background:linear-gradient(135deg,#78350f,#f59e0b); color:#fff; box-shadow:0 3px 14px rgba(245,158,11,.25); }
+.act-btn.ghost   { background:rgba(45,122,255,0.1); border:1px solid rgba(45,122,255,0.2); color:var(--soft); }
+
+.ok-msg  { font-size:12px; font-weight:700; color:#4ade80; margin-top:8px; display:none; }
+.ok-msg.show { display:block; }
+.err-msg { font-size:12px; font-weight:700; color:#f87171; margin-top:8px; display:none; }
+.err-msg.show { display:block; }
+
+/* KEY GENERATOR */
+.key-box { background:rgba(3,9,26,0.7); border:1px solid rgba(45,122,255,0.2); border-radius:14px; padding:13px 14px; font-family:'Nunito',sans-serif; font-size:14px; font-weight:900; color:var(--soft); letter-spacing:.05em; margin-top:10px; text-align:center; display:none; }
+.key-box.show { display:block; }
+
+/* LOADING */
+.loading-row { text-align:center; padding:16px; color:var(--muted); font-size:12.5px; font-weight:600; }
+
+@keyframes spin { to{transform:rotate(360deg)} }
+.spinner { width:14px; height:14px; border:2px solid rgba(255,255,255,.3); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; flex-shrink:0; }
+</style>
+</head>
+<body>
+<canvas id="bgCanvas"></canvas>
+
+<div class="shell">
+  <div id="accessDenied">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+    <h2>Нет доступа</h2>
+    <p>У тебя нет прав администратора.<br>Войди в свой аккаунт и вернись сюда.</p>
+    <a href="game.html" style="display:inline-block;margin-top:18px;padding:10px 22px;background:linear-gradient(135deg,var(--blue2),var(--accent));border-radius:999px;color:#fff;font-size:13px;font-weight:900;text-decoration:none;">В казино</a>
+  </div>
+
+  <div id="adminContent" style="display:none">
+    <a href="game.html" class="back-link">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      Вернуться в казино
+    </a>
+
+    <div class="adm-header">
+      <div class="adm-title">Админ панель</div>
+      <div class="role-chip" id="roleChip">—</div>
+    </div>
+
+    <!-- СТАТЫ -->
+    <div class="card">
+      <div class="card-title">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        Статистика
+      </div>
+      <div class="stats-row">
+        <div class="stat-b"><div class="stat-b-val" id="sTotalUsers">—</div><div class="stat-b-lbl">Игроков</div></div>
+        <div class="stat-b"><div class="stat-b-val" id="sBanned">—</div><div class="stat-b-lbl">Банов</div></div>
+        <div class="stat-b"><div class="stat-b-val" id="sAdmins">—</div><div class="stat-b-lbl">Админов</div></div>
+      </div>
+    </div>
+
+    <!-- УПРАВЛЕНИЕ ИГРОКОМ -->
+    <div class="card">
+      <div class="card-title">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Игроки
+      </div>
+      <div class="players-list" id="playersList">
+        <div class="loading-row">Загрузка...</div>
+      </div>
+    </div>
+
+    <!-- ДЕЙСТВИЯ С ВЫБРАННЫМ ИГРОКОМ -->
+    <div class="card" id="playerActionsCard" style="display:none">
+      <div class="card-title">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Действия
+      </div>
+
+      <div class="sel-player-box">
+        <div class="sel-av" id="selAv">?</div>
+        <div class="sel-info">
+          <div class="sel-name" id="selName">—</div>
+          <div class="sel-meta" id="selMeta">—</div>
+        </div>
+      </div>
+
+      <!-- БАН -->
+      <div class="lbl">Бан</div>
+      <select class="inp" id="banDuration">
+        <option value="1">1 час</option>
+        <option value="24">1 день</option>
+        <option value="168">1 неделя</option>
+        <option value="720">30 дней</option>
+        <option value="0">Навсегда</option>
+      </select>
+      <div class="actions-row">
+        <button class="act-btn danger" onclick="banPlayer()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+          Забанить
+        </button>
+        <button class="act-btn ghost" onclick="unbanPlayer()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Разбанить
+        </button>
+      </div>
+      <div class="ok-msg" id="banOk">Готово!</div>
+
+      <!-- БАЛАНС -->
+      <div class="lbl" style="margin-top:16px">Изменить баланс</div>
+      <select class="inp" id="balField">
+        <option value="balance">$ Доллар</option>
+        <option value="balanceRUB">₽ Рубль</option>
+      </select>
+      <input class="inp" id="balAmount" type="number" placeholder="Новый баланс" min="0" style="margin-top:8px">
+      <div class="actions-row">
+        <button class="act-btn primary" onclick="setBalance()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Установить
+        </button>
+      </div>
+      <div class="ok-msg" id="balOk">Баланс обновлён!</div>
+
+      <!-- ПРЕДУПРЕЖДЕНИЕ -->
+      <div class="lbl" style="margin-top:16px">Предупреждение</div>
+      <input class="inp" id="warnText" type="text" placeholder="Текст предупреждения..." maxlength="200">
+      <div class="actions-row">
+        <button class="act-btn warn" onclick="sendWarning()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          Отправить
+        </button>
+      </div>
+      <div class="ok-msg" id="warnOk">Предупреждение отправлено!</div>
+      <div class="err-msg" id="actionErr"></div>
+    </div>
+
+    <!-- ГЕНЕРАЦИЯ КЛЮЧЕЙ (только owner) -->
+    <div class="card" id="keyGenCard" style="display:none">
+      <div class="card-title">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+        Генерация ключей админа
+      </div>
+      <p style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:12px;line-height:1.5">Создай одноразовый ключ для назначения нового администратора. Отправь ключ нужному человеку.</p>
+      <button class="act-btn primary" onclick="generateAdminKey()" style="flex:none;width:auto;padding:11px 20px">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Создать ключ
+      </button>
+      <div class="key-box" id="generatedKey">—</div>
+      <div style="font-size:11px;color:var(--muted);font-weight:600;margin-top:6px;display:none" id="keyHint">Этот ключ одноразовый. Скопируй и отправь.</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- PARTICLES -->
+<script>
+(function(){
+  const cv=document.getElementById('bgCanvas'),ctx=cv.getContext('2d');
+  let W,H;
+  const COLS=['#2d7aff','#1358b8','#0d47a1'],ps=[];
+  function resize(){W=cv.width=innerWidth;H=cv.height=innerHeight;}
+  addEventListener('resize',resize);resize();
+  class P{constructor(){this.x=Math.random()*W;this.y=Math.random()*H;this.vx=(Math.random()-.5)*.25;this.vy=(Math.random()-.5)*.25;this.r=Math.random()*1.5+.4;this.col=COLS[Math.floor(Math.random()*3)];this.a=Math.random()*.3+.1;this.da=(Math.random()*.0015+.0005)*(Math.random()>.5?1:-1);}update(){this.x+=this.vx;this.y+=this.vy;this.a+=this.da;if(this.a<.05||this.a>.55)this.da*=-1;if(this.x<-10)this.x=W+10;if(this.x>W+10)this.x=-10;if(this.y<-10)this.y=H+10;if(this.y>H+10)this.y=-10;}draw(){ctx.save();ctx.globalAlpha=this.a;ctx.fillStyle=this.col;ctx.beginPath();ctx.arc(this.x,this.y,this.r,0,Math.PI*2);ctx.fill();ctx.restore();}}
+  for(let i=0;i<50;i++)ps.push(new P());
+  function loop(){ctx.clearRect(0,0,W,H);const g=ctx.createRadialGradient(W*.5,H*.5,0,W*.5,H*.5,Math.max(W,H));g.addColorStop(0,'#060f24');g.addColorStop(1,'#020609');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);ps.forEach(p=>{p.update();p.draw();});requestAnimationFrame(loop);}
+  loop();
+})();
+</script>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, collection, getDocs, doc, getDoc, updateDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const app  = initializeApp({ apiKey:"AIzaSyBnPmUMDLSS1pjFzE0aU46BB2h0sxkmUCg",authDomain:"casino-89385.firebaseapp.com",projectId:"casino-89385",storageBucket:"casino-89385.firebasestorage.app",messagingSenderId:"315653962787",appId:"1:315653962787:web:d2df833858d76ff9638596" });
+const auth = getAuth(app);
+const db   = getFirestore(app);
+
+let myRole      = null;
+let selectedUser = null;
+let allUsers    = [];
+
+onAuthStateChanged(auth, async user => {
+  if (!user){ showDenied(); return; }
+  try {
+    const snap = await getDoc(doc(db,'users',user.uid));
+    if (!snap.exists()){ showDenied(); return; }
+    const data = snap.data();
+    myRole = data.role;
+    if (myRole !== 'owner' && myRole !== 'admin'){ showDenied(); return; }
+    showPanel();
+  } catch(e){ showDenied(); }
+});
+
+function showDenied(){ document.getElementById('accessDenied').style.display='block'; }
+function showPanel(){
+  document.getElementById('adminContent').style.display='block';
+  const chip = document.getElementById('roleChip');
+  if (myRole==='owner'){ chip.textContent='Владелец'; chip.className='role-chip chip-owner'; document.getElementById('keyGenCard').style.display='block'; }
+  else { chip.textContent='Администратор'; chip.className='role-chip chip-admin'; }
+  loadPlayers();
+}
+
+async function loadPlayers(){
+  try {
+    const snap = await getDocs(collection(db,'users'));
+    allUsers = [];
+    snap.forEach(d => allUsers.push({ id:d.id, ...d.data() }));
+    allUsers.sort((a,b)=>(a.uid||0)-(b.uid||0));
+
+    const banned = allUsers.filter(u=>u.banned&&(!u.bannedUntil||new Date(u.bannedUntil)>new Date())).length;
+    const admins = allUsers.filter(u=>u.role==='admin'||u.role==='owner').length;
+    document.getElementById('sTotalUsers').textContent = allUsers.length;
+    document.getElementById('sBanned').textContent     = banned;
+    document.getElementById('sAdmins').textContent     = admins;
+
+    const list = document.getElementById('playersList');
+    list.innerHTML = '';
+    allUsers.forEach(u => {
+      const isBanned = u.banned && (!u.bannedUntil || new Date(u.bannedUntil) > new Date());
+      const bal = (u.balance||0).toLocaleString('ru',{minimumFractionDigits:2,maximumFractionDigits:2});
+      const roleHtml = u.role==='owner' ? '<span class="pl-role owner">Овнер</span>'
+                     : u.role==='admin' ? '<span class="pl-role admin">Админ</span>' : '';
+      const banTag = isBanned ? '<span class="banned-tag">Бан</span>' : '';
+      const el = document.createElement('div');
+      el.className = 'player-row';
+      el.innerHTML = `
+        <div class="pl-av ${isBanned?'banned':''}">${(u.username||'?')[0].toUpperCase()}</div>
+        <div class="pl-info">
+          <div class="pl-name">${u.username||'—'}${roleHtml}${banTag}</div>
+          <div class="pl-meta">$ ${bal}</div>
+        </div>`;
+      el.onclick = () => selectPlayer(u, el);
+      list.appendChild(el);
+    });
+  } catch(e){ console.error(e); }
+}
+
+function selectPlayer(user, el){
+  document.querySelectorAll('.player-row').forEach(r=>r.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedUser = user;
+  document.getElementById('playerActionsCard').style.display='block';
+  document.getElementById('selAv').textContent   = (user.username||'?')[0].toUpperCase();
+  document.getElementById('selName').textContent = user.username||'—';
+  const isBanned = user.banned && (!user.bannedUntil||new Date(user.bannedUntil)>new Date());
+  document.getElementById('selMeta').textContent = isBanned ? 'Заблокирован' : `Баланс: $${(user.balance||0).toLocaleString('ru',{minimumFractionDigits:2})}`;
+  // clear messages
+  ['banOk','balOk','warnOk','actionErr'].forEach(id=>{ document.getElementById(id).className=document.getElementById(id).className.replace(' show',''); });
+}
+
+function showOk(id){ const el=document.getElementById(id); el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),2500); }
+function showErr(msg){ const el=document.getElementById('actionErr'); el.textContent=msg; el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),3000); }
+
+window.banPlayer = async () => {
+  if (!selectedUser) return;
+  const hours = parseInt(document.getElementById('banDuration').value);
+  const bannedUntil = hours===0 ? null : new Date(Date.now()+hours*3600000).toISOString();
+  try {
+    await updateDoc(doc(db,'users',selectedUser.id), { banned:true, bannedUntil, bannedAt:new Date().toISOString() });
+    // Send notification to user
+    await addDoc(collection(db,'notifications'), { uid:selectedUser.id, type:'ban', hours, bannedUntil, createdAt:new Date().toISOString(), read:false });
+    showOk('banOk'); loadPlayers();
+  } catch(e){ showErr('Ошибка: '+e.message); }
+};
+
+window.unbanPlayer = async () => {
+  if (!selectedUser) return;
+  try {
+    await updateDoc(doc(db,'users',selectedUser.id), { banned:false, bannedUntil:null });
+    showOk('banOk'); loadPlayers();
+  } catch(e){ showErr('Ошибка: '+e.message); }
+};
+
+window.setBalance = async () => {
+  if (!selectedUser) return;
+  const field  = document.getElementById('balField').value;
+  const amount = parseFloat(document.getElementById('balAmount').value);
+  if (isNaN(amount)||amount<0){ showErr('Введи корректную сумму'); return; }
+  try {
+    await updateDoc(doc(db,'users',selectedUser.id), { [field]:amount });
+    showOk('balOk'); loadPlayers();
+  } catch(e){ showErr('Ошибка: '+e.message); }
+};
+
+window.sendWarning = async () => {
+  if (!selectedUser) return;
+  const text = document.getElementById('warnText').value.trim();
+  if (!text){ showErr('Введи текст предупреждения'); return; }
+  try {
+    await addDoc(collection(db,'notifications'), { uid:selectedUser.id, type:'warning', text, createdAt:new Date().toISOString(), read:false });
+    document.getElementById('warnText').value = '';
+    showOk('warnOk');
+  } catch(e){ showErr('Ошибка: '+e.message); }
+};
+
+function genKey(){
+  const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const seg = ()=>Array.from({length:5},()=>chars[Math.floor(Math.random()*chars.length)]).join('');
+  return `67ADM-${seg()}-${seg()}-${seg()}`;
+}
+
+window.generateAdminKey = async () => {
+  if (myRole!=='owner'){ return; }
+  const key = genKey();
+  try {
+    await addDoc(collection(db,'adminKeys'), { key, used:false, createdAt:new Date().toISOString() });
+    const box = document.getElementById('generatedKey');
+    box.textContent = key;
+    box.classList.add('show');
+    document.getElementById('keyHint').style.display='block';
+  } catch(e){ alert('Ошибка: '+e.message); }
+};
+</script>
+</body>
+</html>
