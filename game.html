@@ -57,14 +57,25 @@ html, body {
   pointer-events: none;
   transform: translateX(40px);
   transition: opacity .35s cubic-bezier(.4,0,.2,1), transform .35s cubic-bezier(.4,0,.2,1);
+  /* Force GPU layer so backdrop-filter on children stays alive */
+  will-change: transform;
+  -webkit-transform: translateX(40px);
 }
 .page.active {
   opacity: 1;
   pointer-events: all;
   transform: translateX(0);
+  -webkit-transform: translateX(0);
 }
-.page.exit-left  { transform: translateX(-40px); }
-.page.exit-right { transform: translateX(40px); }
+.page.exit-left  { transform: translateX(-40px); -webkit-transform: translateX(-40px); }
+.page.exit-right { transform: translateX(40px);  -webkit-transform: translateX(40px); }
+
+/* Cards get their own GPU layer so backdrop-filter survives parent opacity anim */
+.game-card, .bonus-card, .wallet-balance, .wallet-btn,
+.tx-item, .profile-card, .stat-card, .profile-row {
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+}
 
 /* ── PAGE HEADER ── */
 .page-header {
@@ -323,7 +334,7 @@ html, body {
   backdrop-filter: blur(48px) saturate(2) brightness(1.1);
   -webkit-backdrop-filter: blur(48px) saturate(2) brightness(1.1);
   border: 1px solid rgba(255,255,255,0.07);
-  border-radius: 32px;
+  border-radius: 999px;
   padding: 6px;
   display: flex;
   align-items: center;
