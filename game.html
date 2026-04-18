@@ -501,7 +501,7 @@ html, body {
       <div class="profile-card">
         <div class="avatar" id="avatarEl">?</div>
         <div class="profile-name" id="profileName">Игрок</div>
-        <div class="profile-uid" id="profileUid">#—</div>
+        <div class="profile-uid" id="profileDate">в казино с —</div>
       </div>
       <div class="stats-grid">
         <div class="stat-card"><div class="stat-val">0</div><div class="stat-label">Игр</div></div>
@@ -594,28 +594,41 @@ const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db   = getFirestore(app);
 
-function fillUI(name, uid, balance) {
+function fillUI(name, createdAt, balance) {
   const bal = Number(balance || 0).toLocaleString('ru');
   const letter = (name || '?')[0].toUpperCase();
 
-  document.getElementById('profileName').textContent     = name || 'Игрок';
-  document.getElementById('profileUid').textContent      = uid ? '#' + uid : '';
-  document.getElementById('avatarEl').textContent        = letter;
-  document.getElementById('balanceDisplay').textContent  = bal;
-  document.getElementById('walletAmount').textContent    = bal;
+  document.getElementById('profileName').textContent    = name || 'Игрок';
+  document.getElementById('avatarEl').textContent       = letter;
+  document.getElementById('balanceDisplay').textContent = bal;
+  document.getElementById('walletAmount').textContent   = bal;
+
+  // Дата регистрации
+  const dateEl = document.getElementById('profileDate');
+  if (createdAt) {
+    const d = new Date(createdAt);
+    const months = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
+    dateEl.textContent = `в казино с ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+  } else {
+    // Если Firestore недоступен — берём дату создания из Firebase Auth
+    const d = new Date();
+    const months = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
+    dateEl.textContent = `в казино с ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+  }
 }
 
 onAuthStateChanged(auth, async user => {
   if (!user) { location.href = 'index.html'; return; }
 
   const authName = user.displayName || user.email?.split('@')[0] || 'Игрок';
+  // Показываем сразу с текущей датой как заглушка
   fillUI(authName, null, 1000);
 
   try {
     const snap = await getDoc(doc(db, 'users', user.uid));
     if (snap.exists()) {
       const d = snap.data();
-      fillUI(d.username || authName, d.uid, d.balance);
+      fillUI(d.username || authName, d.createdAt, d.balance);
     }
   } catch(e) {
     console.error('Firestore error:', e.code, e.message);
