@@ -76,12 +76,17 @@
 
       const cred = await createUserWithEmailAndPassword(auth, fakeEmail(u), p);
       await updateProfile(cred.user, { displayName: u });
-      await setDoc(doc(db, 'users', cred.user.uid), {
-        username: u,
-        uid: uid,
-        balance: 1000,
-        createdAt: new Date().toISOString()
-      });
+      try {
+        await setDoc(doc(db, 'users', cred.user.uid), {
+          username: u,
+          uid: uid,
+          balance: 1000,
+          createdAt: new Date().toISOString()
+        });
+        alert('✅ Документ записан в users/' + cred.user.uid);
+      } catch(setDocErr) {
+        alert('❌ setDoc упал: ' + setDocErr.code + ' | ' + setDocErr.message);
+      }
       showMsg('reg', `Аккаунт создан! Твой ID: #${uid}`, 'success');
       setTimeout(() => location.href = 'game.html', 1000);
     } catch(e){
