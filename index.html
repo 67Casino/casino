@@ -65,8 +65,10 @@
           tx.set(counterRef, { count: next });
           return next;
         });
+        alert('uid из счётчика: ' + uid);
       } catch(e){
-        alert('Counter error: ' + e.code + ' — ' + e.message);
+        uid = 5556; // специальный маркер — если видишь это число, транзакция упала
+        alert('Counter УПАЛ: ' + e.code + ' | ' + e.message);
       }
 
       const cred = await createUserWithEmailAndPassword(auth, fakeEmail(u), p);
