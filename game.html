@@ -497,7 +497,10 @@ html,body { height:100%; background:var(--bg); font-family:'Nunito',sans-serif; 
       <div class="profile-card">
         <div class="avatar" id="avatarEl">?</div>
         <div class="profile-name" id="profileName">Игрок</div>
-        <div class="profile-uid" id="profileDate">в казино с —</div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:4px">
+          <div class="profile-uid" id="profileDate">в казино с —</div>
+          <div id="profileUidBadge" style="display:none;font-size:10px;font-weight:900;color:var(--accent);background:rgba(45,122,255,0.12);border:1px solid rgba(45,122,255,0.25);border-radius:7px;padding:2px 7px;letter-spacing:.04em"></div>
+        </div>
       </div>
 
       <!-- Статы -->
@@ -696,7 +699,7 @@ onAuthStateChanged(auth, async user => {
         }
       }
 
-      fillUI(d.username||authName, d.createdAt, d.balance||0, d.balanceRUB||0);
+      fillUI(d.username||authName, d.createdAt, d.balance||0, d.balanceRUB||0, d.uid);
       loadHistory(user.uid);
 
       // Показать кнопку админки
@@ -840,7 +843,7 @@ function switchWallet(cur){
   document.getElementById('togRUB').classList.toggle('active',cur==='RUB');
   updateBal();
 }
-function fillUI(name,createdAt,balUSD,balRUB){
+function fillUI(name,createdAt,balUSD,balRUB,uid){
   balances.USD=balUSD||0; balances.RUB=balRUB||0;
   document.getElementById('profileName').textContent=name||'Игрок';
   document.getElementById('avatarEl').textContent=(name||'?')[0].toUpperCase();
@@ -850,6 +853,8 @@ function fillUI(name,createdAt,balUSD,balRUB){
   const d=createdAt?new Date(createdAt):new Date();
   const m=['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
   document.getElementById('profileDate').textContent=`в казино с ${d.getDate()} ${m[d.getMonth()]} ${d.getFullYear()}`;
+  const badge=document.getElementById('profileUidBadge');
+  if(uid){ badge.textContent='#'+uid; badge.style.display='block'; } else { badge.style.display='none'; }
 }
 
 // Currency dropdown
